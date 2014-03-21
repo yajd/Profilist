@@ -1,0 +1,9 @@
+var tps = Components.classes["@mozilla.org/toolkit/profile-service;1"]
+                            .createInstance(Components.interfaces.nsIToolkitProfileService);
+var ps = tps.profiles;
+//while(ps.hasMoreElements()) {
+    var profile = ps.getNext().QueryInterface(Ci.nsIToolkitProfile);
+    var profile = ps.getNext().QueryInterface(Ci.nsIToolkitProfile);
+    var profile = ps.getNext().QueryInterface(Ci.nsIToolkitProfile);
+//}
+Services.wm.getMostRecentWindow(null).alert(profile.remove)

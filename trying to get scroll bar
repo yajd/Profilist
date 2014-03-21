@@ -1,0 +1,3 @@
+var me = Services.wm.getMostRecentWindow(null);
+var PUIcs = document.querySelector('.pane');
+me.alert(PUIcs.ownerDocument.getAnonymousNodes(PUIcs)
