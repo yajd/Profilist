@@ -4,7 +4,7 @@ me.alert(exe.path)
 var process = Cc["@mozilla.org/process/util;1"].createInstance(Ci.nsIProcess);
 process.init(exe);
 me.alert(process.isRunning)
-var profName = 'justNow';
+var profName = 'newProf';
 
     var obsToLaunchProfAfterCreate = {
         observe: function(aSubject, aTopic, aData) {
@@ -17,8 +17,8 @@ var profName = 'justNow';
 //var args = ['-P', 'rnd1', '-no-remote'];
 //var args = ['-CreateProfile', 'home', '-no-remote'];
 var args = ['-CreateProfile', profName, '-no-remote'];
-process.run(false, args, args.length);
-//process.runAsync(args, args.length, obsToLaunchProfAfterCreate);
+//process.run(false, args, args.length);
+process.runAsync(args, args.length, obsToLaunchProfAfterCreate);
 //var args = ['-P', 'rnd1', '-no-remote'];
 
 //var exe = FileUtils.getFile("DefProfRt", []); //this gives path to profiels folder
