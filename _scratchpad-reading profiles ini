@@ -1,0 +1,22 @@
+var me = Services.wm.getMostRecentWindow(null);
+
+//var p = OS.Path.join(installPath, "profiles.ini");
+//console.log(OS.Constants.Path)
+//me.alert(p.path);
+var profilesIniPath = OS.Path.join(OS.Constants.Path.userApplicationDataDir, 'profiles.ini')
+me.alert(profilesIniPath)
+
+let decoder = new TextDecoder();        // This decoder can be reused for several reads
+let promise = OS.File.read(profilesIniPath); // Read the complete file as an array
+promise = promise.then(
+  function onSuccess(ArrayBuffer) {
+    var string = decoder.decode(ArrayBuffer);// Convert this array to a text
+    console.log(string.split('\n'));
+    return string;
+  }
+);
+
+//apparently theres for profiles made in default prof dir:
+//localDir = C:\Users\ali57233\AppData\Local\Mozilla\Firefox\Profiles\czbm1ps9.rnd1
+//rootDir = C:\Users\ali57233\AppData\Roaming\Mozilla\Firefox\Profiles\czbm1ps9.rnd1
+//for custom prof dir localDir and rootDir are same

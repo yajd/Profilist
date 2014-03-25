@@ -1,0 +1,112 @@
+var me = Services.wm.getMostRecentWindow(null);
+
+//var p = OS.Path.join(installPath, "profiles.ini");
+//console.log(OS.Constants.Path)
+//me.alert(p.path);
+
+//from http://mxr.mozilla.org/mozilla-central/source/xpcom/io/nsDirectoryServiceDefs.h
+//shud add from: http://mxr.mozilla.org/mozilla-aurora/source/xpcom/build/nsXULAppAPI.h#49
+var w = [
+'Trsh',
+'Strt',
+'Shdwn',
+'ApplMenu',
+'CntlPnl',
+'Exts',
+'Fnts',
+'Prfs',
+'Docs',
+'ISrch',
+'DfltDwnld',
+'ULibDir',
+'UsrDsk',
+'LocDsk',
+'UsrApp',
+'LocApp',
+'UsrDocs',
+'LocDocs',
+'UsrIntrntPlgn',
+'LoclIntrntPlgn',
+'UsrFrmwrks',
+'LocFrmwrks',
+'UsrPrfs',
+'LocPrfs',
+'Pct',
+'Mov',
+'Music',
+'IntrntSts',
+'WinD',
+'ProgF',
+'DeskV',
+'Progs',
+'Cntls',
+'Prnts',
+'Pers',
+'Favs',
+'Strt',
+'Rcnt',
+'SndTo',
+'Buckt',
+'Strt',
+'DeskP',
+'Drivs',
+'NetW',
+'netH',
+'Fnts',
+'Tmpls',
+'CmStrt',
+'CmPrgs',
+'CmStrt',
+'CmDeskP',
+'CmAppData',
+'AppData',
+'LocalAppData',
+'PrntHd',
+'CookD',
+'DfltDwnld',
+'Docs',
+'Pict',
+'Music',
+'Vids',
+'Locl',
+'LibD',
+'XDGDesk',
+'XDGDocs',
+'XDGDwnld',
+'XDGMusic',
+'XDGPict',
+'XDGPubSh',
+'XDGTempl',
+'XDGVids',
+'DfltDwnld',
+'DrvD'
+];
+
+
+
+var str = [];
+[].forEach.call(w, function(ww) {
+    var s = [ww]
+    try {
+    var file = Components.classes["@mozilla.org/file/directory_service;1"]
+                        .getService(Components.interfaces.nsIProperties)
+                        .get(ww, Components.interfaces.nsIFile);
+       s.push(file.path);
+    } catch (ex) {
+        s.push('nsiDir,nsIProp ex = ');
+        s.push(ex);
+    }
+    try {
+       var p = FileUtils.getFile(ww, []); //this gives path to executable
+        s.push(p.path);
+    } catch (ex) {
+        s.push('FileUtils ex = ');
+        s.push(ex);
+    }
+    console.info(s);
+    str.push(s)
+})
+
+console.info(str);
+
+me.alert('done')

@@ -1,0 +1,7 @@
+var tps = Cc['@mozilla.org/toolkit/profile-service;1'].createInstance(Ci.nsIToolkitProfileService); //toolkitProfileService
+
+var profileList = tps.profiles;
+     while (profileList.hasMoreElements()) {
+       var profile = profileList.getNext().QueryInterface(Ci.nsIToolkitProfile);
+         console.info(profile)
+     }
