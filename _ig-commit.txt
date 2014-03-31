@@ -1,3 +1,0 @@
-learned: to put stack element in panel, it doesnt behave as stack it behaves as display:block, this is because its parent <panelview> is set to display:flex, so i have to set create a box, then inside the box add the stack, now the children of stack properly stack on each other. even if put in style tag of stack, if its not in a box, to be display:-moz-box; and even if set it to important, it won't act as box until put it in a non-flex element
-my css on the PanelUI-profilist is not right for some reason so i had to force it with style attribute
-width on stack is not matching full width unless i set style width 100%
