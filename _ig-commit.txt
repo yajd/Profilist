@@ -1,0 +1,14 @@
+initial.rev18
+-on delete now checking if profile is in use
+-on rename keeping in same spot in panel (had to rework launchProfile for e) AND also keeping in same spot (meaing ProfileN) in profiles.ini and this was an important thing for ordering
+-on open menu it should readIni/updateProfToolkit :todo: in fuyure watch ini file and update only when ini is modified
+-fixed so profToolkit.rootPathDefault and profToolkit.localPathDefault are correct even in profiles stored at non default paths ie: a profile made on desktop
+-found bug, tps.selectedProfile is not the currently in use profile, I SUSPECT it is the default profile, so use alternative now
+-using profToolkit.selectedProfile.name again on when stackDOMJson.length == 0 in loadIntoWindow, it will be 0 but no other choice, i also do this == 0 thing in updateStackDOMJson_basedOnToolkit
+-:todo: thinking of removing profname props thing i dont think i need it at all, the loop that uses it i can use label value instead
+-:todo: touch up the 0 menu item
+-:todo: figure out the Promise.all thing
+
+
+:Release Notes:
+-right now if you delete profile with Default=1 then on next start of firefox with no profile specifid it will come up with ProfileManager and ask you which one to launch and it will make that the default, and on future when starte firefox.exe it will launch this one as default. IF StartWithLastProfile=1. IF StartWithLastProfile=0 then it starts ProfileManager anyways and an on start it will set what you pikc to Default=1
