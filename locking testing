@@ -1,0 +1,35 @@
+//this gets all profile names and adds it to profToolkit.profiles and determines if it is in use or not
+var tps = Cc['@mozilla.org/toolkit/profile-service;1'].createInstance(Ci.nsIToolkitProfileService); //toolkitProfileService
+
+var profToolkit = {
+	profiles: {}
+};
+var profileList = tps.profiles;
+profToolkit.profiles = {};
+while (profileList.hasMoreElements()) {
+	var profile = profileList.getNext().QueryInterface(Ci.nsIToolkitProfile);
+	profToolkit.profiles[profile.name] = {};
+}
+console.info('profToolkit', profToolkit.profiles);
+//console.info('profileList', profileList);
+
+/*figuring out what aDirect and aTemp are when use tps.profiles.x.lock*/
+
+/*
+//when profile is in default
+var locker = profile.lock({});
+console.info(locker)
+//localDirectory = C:\Users\ali57233\AppData\Local\Mozilla\Firefox\Profiles\bc95kb4k.Unnamed Profile 1
+//directory = C:\Users\ali57233\AppData\Roaming\Mozilla\Firefox\Profiles\bc95kb4k.Unnamed Profile 1
+*/
+/*
+//when profile is in custom path
+console.info(profile)
+var locker = profile.lock({});
+console.info(locker)
+//localDirectory = C:\Users\ali57233\Desktop\desk lock
+//directory = C:\Users\ali57233\Desktop\desk lock
+*/
+
+//learned that aDirect and aTemp is just root folder for profiles made at custom paths
+locker.unlock();

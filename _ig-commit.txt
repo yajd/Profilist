@@ -1,14 +1,13 @@
-initial.rev18
--on delete now checking if profile is in use
--on rename keeping in same spot in panel (had to rework launchProfile for e) AND also keeping in same spot (meaing ProfileN) in profiles.ini and this was an important thing for ordering
--on open menu it should readIni/updateProfToolkit :todo: in fuyure watch ini file and update only when ini is modified
--fixed so profToolkit.rootPathDefault and profToolkit.localPathDefault are correct even in profiles stored at non default paths ie: a profile made on desktop
--found bug, tps.selectedProfile is not the currently in use profile, I SUSPECT it is the default profile, so use alternative now
--using profToolkit.selectedProfile.name again on when stackDOMJson.length == 0 in loadIntoWindow, it will be 0 but no other choice, i also do this == 0 thing in updateStackDOMJson_basedOnToolkit
--:todo: thinking of removing profname props thing i dont think i need it at all, the loop that uses it i can use label value instead
--:todo: touch up the 0 menu item
--:todo: figure out the Promise.all thing
-
-
-:Release Notes:
--right now if you delete profile with Default=1 then on next start of firefox with no profile specifid it will come up with ProfileManager and ask you which one to launch and it will make that the default, and on future when starte firefox.exe it will launch this one as default. IF StartWithLastProfile=1. IF StartWithLastProfile=0 then it starts ProfileManager anyways and an on start it will set what you pikc to Default=1
+-working on Promise.all, making all refreshIni == 1 return promises at proper places
+-double confirm delete profile by changing to confirmCheck
+-changed profname in props of stackDOMJson to profpath as that is constant after creation :assume:
+-in initProfToolkit i had localPathDefault and rootPathDefault getting set to opposite vals
+-also now pushing objToSplice if it's found to be active
+-on refreshIni i wasnt returning promise, doing that now.
+-to reject a promise have to use Promise.reject(new Error('blah')) so i made this update
+-sometiems was getting a already initalized error on the exe when doing run (line 975) so i added '-new-instance' as argument hopefully this fixes that :::  i figured it out, this is because the instance is still open. (to reproduce: create profile and keep that launch open, then try create profile again, it will give this error) ::: put in solution: no longer using myServices.proc but now just doing init every time
+-when deleting more than one profile WHILE another profile is open with profilist installed, it only removes one child and the rest remain, its weird im trying to fix that right now :todo: (not yet fixed) (i think might be fixed now)
+-got promise chain faield to handle a rejction on delete of custom path profile :::: (FIXED THIS: was doing remove instead of removeDir)
+-SOMEHOW it is deleting profile that is in use sometimes i need to figure out what cuases this, the folders actually dont get deleted ::: figured it out, tps.profiles doesnt refresh and i wasnt breaking the while loop so it was using the last one left in memory
+-changed so instead of immediate mousedown on active it goes to rename its oncommand
+-is updating whenever any panel shows in panelui so im making it only when main panel shows it should run update

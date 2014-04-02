@@ -1,0 +1,15 @@
+//this gets all profile names and adds it to profToolkit.profiles and determines if it is in use or not
+var tps = Cc['@mozilla.org/toolkit/profile-service;1'].createInstance(Ci.nsIToolkitProfileService); //toolkitProfileService
+var aDirect = new FileUtils.File('C:\\Users\\ali57233\\Desktop\\desk lock')
+var aTemp = new FileUtils.File('C:\\Users\\ali57233\\Desktop\\desk lock')
+try {
+    var locker = tps.lockProfilePath(aDirect,aTemp)
+    console.log('NOT in use');
+    locker.unlock();
+} catch (ex) {
+    if (ex.result == Components.results.NS_ERROR_FILE_ACCESS_DENIED) {
+        console.log('ok its in use');
+    } else {
+        throw ex;
+    }
+}
