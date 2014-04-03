@@ -1311,9 +1311,6 @@ var windowListener = {
 					return;
 				}
 				*/
-				if (referenceNodes.profilist_stack.lastChild.hasAttribute('disabled')) {
-					return;
-				}
 				referenceNodes.profilist_stack.addEventListener('transitionend', function() {
 					referenceNodes.profilist_stack.removeEventListener('transitionend', arguments.callee, false);
 					if (referenceNodes.profilist_stack.style.height == collapsedheight + 'px') {
