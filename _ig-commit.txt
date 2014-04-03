@@ -1,13 +1,16 @@
--working on Promise.all, making all refreshIni == 1 return promises at proper places
--double confirm delete profile by changing to confirmCheck
--changed profname in props of stackDOMJson to profpath as that is constant after creation :assume:
--in initProfToolkit i had localPathDefault and rootPathDefault getting set to opposite vals
--also now pushing objToSplice if it's found to be active
--on refreshIni i wasnt returning promise, doing that now.
--to reject a promise have to use Promise.reject(new Error('blah')) so i made this update
--sometiems was getting a already initalized error on the exe when doing run (line 975) so i added '-new-instance' as argument hopefully this fixes that :::  i figured it out, this is because the instance is still open. (to reproduce: create profile and keep that launch open, then try create profile again, it will give this error) ::: put in solution: no longer using myServices.proc but now just doing init every time
--when deleting more than one profile WHILE another profile is open with profilist installed, it only removes one child and the rest remain, its weird im trying to fix that right now :todo: (not yet fixed) (i think might be fixed now)
--got promise chain faield to handle a rejction on delete of custom path profile :::: (FIXED THIS: was doing remove instead of removeDir)
--SOMEHOW it is deleting profile that is in use sometimes i need to figure out what cuases this, the folders actually dont get deleted ::: figured it out, tps.profiles doesnt refresh and i wasnt breaking the while loop so it was using the last one left in memory
--changed so instead of immediate mousedown on active it goes to rename its oncommand
--is updating whenever any panel shows in panelui so im making it only when main panel shows it should run update
+-getting stuck in rename mode so working on that now ::: what was happening was, i was clicking on active profile then blanking it to delete, then confirming, it would they say cannot delete as its in use and would return new Error and error console would say "promise.then is not a function" and would point to the line of function onReject in the promise.then ::: I made it return Promise.reject(new Error) and that fixed it, i think you only have to do this from function when its not a promise, i suspect if its already a promise then just return new Error
+--so as a consequence of this i made all return new errors in functions, that are not yet promise, return Promise.reject (in the functions that have refreshIni as option, if == 1 then it becomes a promise then no need to return Promise.reject but if == 0 then its not a promise so have to return Promise.reject, so in these cases rather then test refreshIni value i just made it return Promise.reject on the errors, no harm in returning Promise.reject if its already a promise
+--fixed the double alert on delete fail, its now alerting the message on fail and doesnt tell you to look in browser console for details
+-removed the try catch on delte of in rename mode var in unload of window, just doing the delete now without try catch
+-was not return createProfile or handling promise in createUnnamedProfile
+--made all errors in createPofile, renameProfile, and deleteProfile return new Error (and Promise.rejct where necessary)
+-added error handling when deleting and file not found when trying to lock
+-changed so succesful delete/rename messages are alert service rather then prompt. i decided only errors are prompt.
+-fixed so that every time on createMenuFromJson it takes off the height style and then does boxObject to get true inherited height
+-fixed the stackChilds removing when its no longer in profiles.ini, its weird but the [].forEach is not good for removing stuff, after it removes the first one it misses the next one at least if its right after it :learned:
+-added so that on customize it disables
+-bug: if open customize page before opening popup (this can happen if the customize tab is open before install, then after install they havent opened popup yet) then profilist stuff is not in there ::: decided to leave it outstanding for first release as its not a big deal
+-bug: if in customize on say "Unnamed Profile 1" and then from "Main" rename "Unnamed Profile 1" it doesnt update it while its in customization page (i decided its ok to leave it outstanding until get file watcher)
+
+:Release Notes:
+-Try not to use special characters when renaming profiles. It works for the most part but the querySelector function fails. You'll know if it fails because when you try to open the menu instead of the profile name it the item will read "undefined". From my testing if you use an equals, it must be the last character. I'm not really sure what all special characters mess it up. I'll find someway to make them all work in the future but for now avoid it.
