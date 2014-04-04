@@ -57,7 +57,7 @@ function readIni() {
 			var readStr = decoder.decode(ArrayBuffer); // Convert this array to a text
 			//console.log(readStr);
 			ini = {};
-			var patt = /\[(.*?)(\d*?)\](?:\s+?(.+)=(.+))(?:\s+?(.+)=(.+))?(?:\s+?(.+)=(.+))?(?:\s+?(.+)=(.+))?(?:\s+?(.+)=(.+))?/mg;
+			var patt = /\[(.*?)(\d*?)\](?:\s+?(.+?)=(.+))(?:\s+?(.+?)=(.+))?(?:\s+?(.+?)=(.+))?(?:\s+?(.+?)=(.+))?(?:\s+?(.+?)=(.+))?/mg;
 			var blocks = [];
 
 			var match;
@@ -153,12 +153,11 @@ var kSaltTable = [
 	'1', '2', '3', '4', '5', '6', '7', '8', '9', '0'
 ];
 
-var kSaltString = '';
-for (var i = 0; i < 8; ++i) {
-	kSaltString += kSaltTable[Math.floor(Math.random() * kSaltTable.length)];
-}
-
 function saltName(aName) {
+	var kSaltString = '';
+	for (var i = 0; i < 8; ++i) {
+		kSaltString += kSaltTable[Math.floor(Math.random() * kSaltTable.length)];
+	}
 	return kSaltString + '.' + aName;
 }
 /*end - salt generator*/
@@ -698,7 +697,7 @@ function updateStackDOMJson_basedOnToolkit() { //and based on ini as well
 				console.log('stackDOMJson is 0 length', stackDOMJson);
 				console.log('profToolkit=',profToolkit);
 				stackDOMJson = [
-					{nodeToClone:'PUIsync', identifier:'.create', label:'Create New Profile', class:'PanelUI-profilist create', id:null, oncommand:null, status:null, tooltiptext:null, signedin:null, defaultlabel:null, errorlabel:null,  addEventListener:['command',createUnnamedProfile,false], style:'-moz-appearance:none; padding:10px 0 10px 15px; margin-bottom:-1px; border-top:1px solid rgba(24,25,26,0.14); border-bottom:1px solid transparent; border-right:0 none rgb(0,0,0); border-left:0 none rgb(0,0,0);'},
+					{nodeToClone:'PUIsync', identifier:'[label="Create New Profile"]', label:'Create New Profile', class:'PanelUI-profilist create', id:null, oncommand:null, status:null, tooltiptext:null, signedin:null, defaultlabel:null, errorlabel:null,  addEventListener:['command',createUnnamedProfile,false], style:'-moz-appearance:none; padding:10px 0 10px 15px; margin-bottom:-1px; border-top:1px solid rgba(24,25,26,0.14); border-bottom:1px solid transparent; border-right:0 none rgb(0,0,0); border-left:0 none rgb(0,0,0);'},
 					{nodeToClone:'PUIsync', identifier:'[label="' + profToolkit.selectedProfile.name + '"]', label:profToolkit.selectedProfile.name, class:'PanelUI-profilist', id:null, oncommand:null, tooltiptext:null, signedin:null, defaultlabel:null, errorlabel:null, status:'active', addEventListener:['command', makeRename, false], style:'-moz-appearance:none; padding:10px 0 10px 15px; margin-bottom:-1px; border-top:1px solid rgba(24,25,26,0.14); border-bottom:1px solid transparent; border-right:0 none rgb(0,0,0); border-left:0 none rgb(0,0,0);', props:{profpath:ini[profToolkit.selectedProfile.name].props.Path}}
 				];
 				var profNamesCurrentlyInMenu = [ini[profToolkit.selectedProfile.name].props.Path];
@@ -830,7 +829,7 @@ var observers = {
             }
     }
     */
-    'profile-do-change': {
+    /* 'profile-do-change': {
         observe: function(aSubject, aTopic, aData) {
 			console.info('incoming profile-do-change: aSubject = ' + aSubject + ' | aTopic = ' + aTopic + ' | aData = ' + aData);
         },
@@ -851,7 +850,7 @@ var observers = {
         unreg: function() {
 			Services.obs.removeObserver(observers['profile-before-change'], 'profile-before-change');
         }
-    }
+    } */
 };
 
 var renameTimeouts = [];
@@ -915,7 +914,7 @@ function actuallyMakeRename(el) {
 	if (promptResult) {
 		if (promptInput.value == '') {
 			var confirmCheck = {value:false};
-			var confirmResult = Services.prompt.confirmCheck(null, self.name + ' - ' + 'Delete Profile', 'Are you sure you want to delete the profile named "' + oldProfName + '"? All profile files will be deleted.', 'Confirm Deletion', confirmCheck);
+			var confirmResult = Services.prompt.confirmCheck(null, self.name + ' - ' + 'Delete Profile', 'Are you sure you want to delete the profile named "' + oldProfName + '"? All of its files will be deleted.', 'Confirm Deletion', confirmCheck);
 			if (confirmResult) {				
 				if (confirmCheck.value) {
 					var promise = deleteProfile(1, oldProfName);
@@ -1071,6 +1070,13 @@ function updateMenuDOM(aDOMWindow, json) {
 	}
 	var stack = profilist_box.childNodes[0];
 	
+	var stackChilds = stack.childNodes;
+	var identObj = {};
+	for (var i=0; i<stackChilds.length; i++) {
+		var lbl = stackChilds[i].getAttribute('label');
+		identObj['[label="' + lbl + '"]'] = stackChilds[i];
+	}
+	
 	var cumHeight = 0;
 	var PUIsync;
 	for (var i=0; i<json.length; i++) {
@@ -1079,7 +1085,7 @@ function updateMenuDOM(aDOMWindow, json) {
 		var appendChild = false;
 		if (json[i].identifier) {
 			console.log('identifier  string =', json[i].identifier);
-			el = stack.querySelector(json[i].identifier);
+			el = identObj[json[i].identifier]; //stack.querySelector(json[i].identifier);
 			console.log('post ident el = ', el);
 		}
 		if (!el) {

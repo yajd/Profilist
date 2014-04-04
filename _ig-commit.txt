@@ -1,16 +1,4 @@
--getting stuck in rename mode so working on that now ::: what was happening was, i was clicking on active profile then blanking it to delete, then confirming, it would they say cannot delete as its in use and would return new Error and error console would say "promise.then is not a function" and would point to the line of function onReject in the promise.then ::: I made it return Promise.reject(new Error) and that fixed it, i think you only have to do this from function when its not a promise, i suspect if its already a promise then just return new Error
---so as a consequence of this i made all return new errors in functions, that are not yet promise, return Promise.reject (in the functions that have refreshIni as option, if == 1 then it becomes a promise then no need to return Promise.reject but if == 0 then its not a promise so have to return Promise.reject, so in these cases rather then test refreshIni value i just made it return Promise.reject on the errors, no harm in returning Promise.reject if its already a promise
---fixed the double alert on delete fail, its now alerting the message on fail and doesnt tell you to look in browser console for details
--removed the try catch on delte of in rename mode var in unload of window, just doing the delete now without try catch
--was not return createProfile or handling promise in createUnnamedProfile
---made all errors in createPofile, renameProfile, and deleteProfile return new Error (and Promise.rejct where necessary)
--added error handling when deleting and file not found when trying to lock
--changed so succesful delete/rename messages are alert service rather then prompt. i decided only errors are prompt.
--fixed so that every time on createMenuFromJson it takes off the height style and then does boxObject to get true inherited height
--fixed the stackChilds removing when its no longer in profiles.ini, its weird but the [].forEach is not good for removing stuff, after it removes the first one it misses the next one at least if its right after it :learned:
--added so that on customize it disables
--bug: if open customize page before opening popup (this can happen if the customize tab is open before install, then after install they havent opened popup yet) then profilist stuff is not in there ::: decided to leave it outstanding for first release as its not a big deal
--bug: if in customize on say "Unnamed Profile 1" and then from "Main" rename "Unnamed Profile 1" it doesnt update it while its in customization page (i decided its ok to leave it outstanding until get file watcher)
-
-:Release Notes:
--Try not to use special characters when renaming profiles. It works for the most part but the querySelector function fails. You'll know if it fails because when you try to open the menu instead of the profile name it the item will read "undefined". From my testing if you use an equals, it must be the last character. I'm not really sure what all special characters mess it up. I'll find someway to make them all work in the future but for now avoid it.
+-changed so stackUpdated updates all windows, this is required because on menu open it just refreshes ini and IF changed then it will update the menu, so if open in one window it updates there, then go open in another window it wont update as its already been updated
+-removed dependence on querySelector for identifier, so now ident by label name even for "Create New Profile" (so removed that force rename and catastrophic failure stuff)
+-updated pattern so can handle = signs in profile names
+-bug: open 2 windows in Main. then in second window of Main open popup. Then from main of Main create a new profile. Then from new profile create another new profile. Then go to main window of Main and see that height of two tabs is missing so create profile button and first profile button will be missing.
