@@ -11,6 +11,8 @@ var collapsedheight = 0; //holds height stack should be when collapsed
 var expandedheight = 0; //holds height stack should be when expanded
 var stackDOMJson = []; //array holding menu structure in stack /*:note: :important:must insert the "Default: profile" into stackDOMJson last as last element in stack is top most*/
 var unloaders = {};
+var PUIsync_height = 0;
+var PUIsync;
 
 const { TextEncoder, TextDecoder } = Cu.import("resource://gre/modules/commonjs/toolkit/loader.js", {});
 Cu.import('resource://gre/modules/Services.jsm');
@@ -603,16 +605,47 @@ function initProfToolkit() {
 	*/
 }
 
-function updateOnPanelShowing(e) {
-	console.error('e on panel showing = ', e);
-	if (e.target.id == 'PanelUI-popup') {
-		updateProfToolkit(1, 1);
+function updateOnPanelShowing(e, aDOMWindow, dontUpdateIni) {
+	if (!e) {
+		var PanelUI = aDOMWindow.document.querySelector('#PanelUI-popup');
+		var win = aDOMWindow;
 	} else {
-		console.log('not main panel showing so dont updateProfToolkit');
+		console.log('e on panel showing = ', e);
+		console.log('e.view == e.target.ownerDocument.defaultView == ', e.view == e.target.ownerDocument.defaultView);
+		if (e.target.id != 'PanelUI-popup') {
+			console.log('not main panel showing so dont updateProfToolkit');
+			return;
+		} else {
+			var PanelUI = e.target;
+			var win = e.view;
+		}
 	}
+		/*if edit anything here make sure to copy updateOnPanelShowing*/
+		PUIsync = PanelUI.querySelector('#PanelUI-fxa-status');
+		var puisynch = PUIsync.boxObject.height;
+		if (puisynch != 0 && PUIsync_height != puisynch) {
+			console.log('PUIsync_height updated == ' + puisynch);
+			PUIsync_height = puisynch;
+		}
+		
+		var stack = PanelUI.querySelector('#profilist_box').childNodes[0];
+		//assume its supposed to be in collapsed state right now
+		if (collapsedheight != puisynch || stack.style.height == '') {
+			collapsedheight = puisynch;
+			stack.style.height = collapsedheight + 'px';
+		}
+		/*end if edit anything here make sure to copy updateOnPanelShowing*/
+		
+		var updateIni = 1;
+		if (dontUpdateIni) {
+			updateIni = 0;
+		}
+
+		win.setTimeout(function() { updateProfToolkit(updateIni, 1, win); }, 5000);
+
 }
 
-function updateProfToolkit(refreshIni, refreshStack) {
+function updateProfToolkit(refreshIni, refreshStack, iDOMWindow) {
 	if (refreshIni == 1) {
 		var promise = readIni();
 		promise.then(
@@ -628,7 +661,9 @@ function updateProfToolkit(refreshIni, refreshStack) {
 	} else {
 		if (profToolkit.rootPathDefault === 0) {
 			console.log('initing prof toolkit');
-			refreshStack = true;
+			if (refreshStack !== 0) {
+				refreshStack = true;
+			}
 			console.log('initing prof toolkit');
 			initProfToolkit();
 			console.log('init done');
@@ -685,12 +720,12 @@ function updateProfToolkit(refreshIni, refreshStack) {
 		
 		
 		if (refreshStack) {
-			updateStackDOMJson_basedOnToolkit();
+			return updateStackDOMJson_basedOnToolkit(false, iDOMWindow);
 		}
 	}
 }
 
-function updateStackDOMJson_basedOnToolkit() { //and based on ini as well
+function updateStackDOMJson_basedOnToolkit(dontUpdateStack, iDOMWindow) { //and based on ini as well
 			console.log('updating stackDOMJson based on profToolkit AND ini');
 			var stackUpdated = false; //if splice in anything new in or anything old out then set this to true, if true then run dom update
 			if (stackDOMJson.length == 0) {
@@ -802,11 +837,20 @@ function updateStackDOMJson_basedOnToolkit() { //and based on ini as well
 			console.info('stackDOMJson before checking if stackUpdated==true',stackDOMJson);
 			if (stackUpdated) {
 				console.info('something was changed in stack so will update all menus now');
-				let DOMWindows = Services.wm.getEnumerator(null);
-				while (DOMWindows.hasMoreElements()) {
-					let aDOMWindow = DOMWindows.getNext();
-					if (aDOMWindow.document.querySelector('#profilist_box')) { //if this is true then the menu was already crated so lets update it, otherwise no need to update as we updated the stackDOMJson and the onPopupShowing will handle menu create
-						updateMenuDOM(aDOMWindow, stackDOMJson);
+				if (dontUpdateStack) {
+					console.warn('dontUpdateStack is set to true so will ABORTING update all menus');
+				} else {
+					if (iDOMWindow) {
+						console.log('just updating iDOMWindow');
+						updateMenuDOM(iDOMWindow, stackDOMJson);
+					} else {
+						let DOMWindows = Services.wm.getEnumerator(null);
+						while (DOMWindows.hasMoreElements()) {
+							let aDOMWindow = DOMWindows.getNext();
+							if (aDOMWindow.document.querySelector('#profilist_box')) { //if this is true then the menu was already crated so lets update it, otherwise no need to update as we updated the stackDOMJson and the onPopupShowing will handle menu create
+								updateMenuDOM(aDOMWindow, stackDOMJson);
+							}
+						}
 					}
 				}
 			}
@@ -1078,7 +1122,9 @@ function updateMenuDOM(aDOMWindow, json) {
 	}
 	
 	var cumHeight = 0;
-	var PUIsync;
+	
+	//cant set stack height here because popup state is now open. well can change it, but have to resize panel with the panelFit function i cant find here. because if i make it any taller than it is, then the scrollbar will show as the panel wont be sized to fit properly
+	
 	for (var i=0; i<json.length; i++) {
 		console.log('in json arr = ', i);
 		var el = null;
@@ -1090,9 +1136,6 @@ function updateMenuDOM(aDOMWindow, json) {
 		}
 		if (!el) {
 			if (json[i].nodeToClone == 'PUIsync') {
-				if (!PUIsync) {
-					PUIsync = aDOMWindow.document.querySelector('#PanelUI-popup').querySelector('#PanelUI-fxa-status');
-				}
 				json[i].nodeToClone = PUIsync;
 			}
 			el = json[i].nodeToClone.cloneNode(true);
@@ -1132,16 +1175,9 @@ function updateMenuDOM(aDOMWindow, json) {
 				json[i].identifer = '[label="' + json[i].label + '"]'; //have to do this here as needed the identifier to ident this el
 			}
 		}
-		if (appendChild) {
-			if (json[i].status != 'active') { //this if makes sure the selected profile one gets added last note: again this is important because the last most element is top most on stack when collapsed, but in my case its more important because it gets the perm-hover class
-				stack.insertBefore(el, stack.firstChild);
-			} else {
-				stack.appendChild(el);
-			}
-			console.log('appended', el);
-		}
-		el.style.height = '';
-		var elHeight = el.boxObject.height;
+		
+		//el.style.height = '';
+		var elHeight = PUIsync_height; //el.boxObject.height;
 		//var elHeight = el.ownerDocument.defaultView.getComputedStyle(el,null).getPropertyValue('height'); //have to use getComputedStyle instead of boxObject.height because boxObject.height is rounded, i need cumHeight added with non-rounded values but top is set with rounded value
 		//elHeight = parseFloat(elHeight);
 		if (elHeight == 0) {
@@ -1155,7 +1191,8 @@ function updateMenuDOM(aDOMWindow, json) {
 			}
 		}
 		el.style.height = elHeight + 'px';
-		console.log('el.boxObject.height = ', elHeight);
+		console.log('PUIsync_height = ', PUIsync_height);
+		console.log('el.boxObject.height = ', el.boxObject.height);
 		cumHeight += elHeight;
 		console.log('cumHeight after adding = ' + cumHeight);
 		if (i < json.length - 1) {
@@ -1166,9 +1203,27 @@ function updateMenuDOM(aDOMWindow, json) {
 			el.setAttribute('top', '0');
 			console.log('set el top to 0');
 		}
+		
+		if (appendChild) {
+			if (json[i].status != 'active') { //this if makes sure the selected profile one gets added last note: again this is important because the last most element is top most on stack when collapsed, but in my case its more important because it gets the perm-hover class
+				stack.insertBefore(el, stack.firstChild);
+			} else {
+				stack.appendChild(el);
+			}
+			console.log('appended', el);
+		}
+
 	}
-	collapsedheight = elHeight;
-	expandedheight = cumHeight;
+	if (expandedheight != cumHeight) {
+		var oldExpandedheight = expandedheight;
+		expandedheight = cumHeight;
+		if (stack.boxObject.height == oldExpandedheight) {
+			stack.style.height = expandedheight + 'px';
+			console.warn('stack.boxObject.height EQUALS oldExpandedheight', 'oldExpandedheight', oldExpandedheight, 'stack.boxObject.height', stack.boxObject.height)
+		} else {
+			console.warn('stack.boxObject.height does NOT equal oldExpandedheight', 'oldExpandedheight', oldExpandedheight, 'stack.boxObject.height', stack.boxObject.height)
+		}
+	}
 	console.log('collapsedheight', collapsedheight);
 	console.log('expandedheight', expandedheight);
 
@@ -1210,19 +1265,21 @@ function customizationending(e) {
 }
 
 /*start - windowlistener*/
+var registered = false;
 var windowListener = {
 	//DO NOT EDIT HERE
 	onOpenWindow: function (aXULWindow) {
 		// Wait for the window to finish loading
 		let aDOMWindow = aXULWindow.QueryInterface(Ci.nsIInterfaceRequestor).getInterface(Ci.nsIDOMWindowInternal || Ci.nsIDOMWindow);
-		aDOMWindow.addEventListener("load", function () {
-			aDOMWindow.removeEventListener("load", arguments.callee, false);
+		aDOMWindow.addEventListener('load', function () {
+			aDOMWindow.removeEventListener('load', arguments.callee, false);
 			windowListener.loadIntoWindow(aDOMWindow);
 		}, false);
 	},
 	onCloseWindow: function (aXULWindow) {},
 	onWindowTitleChange: function (aXULWindow, aNewTitle) {},
 	register: function () {
+		
 		// Load into any existing windows
 		let DOMWindows = Services.wm.getEnumerator(null);
 		while (DOMWindows.hasMoreElements()) {
@@ -1231,6 +1288,8 @@ var windowListener = {
 		}
 		// Listen to new windows
 		Services.wm.addListener(windowListener);
+		
+		registered = true;
 	},
 	unregister: function () {
 		// Unload from any existing windows
@@ -1255,77 +1314,54 @@ var windowListener = {
 		
 		var PanelUI = aDOMWindow.document.querySelector('#PanelUI-popup');
 		if (PanelUI) {			
-			var PUIsync = PanelUI.querySelector('#PanelUI-fxa-status');
-			console.info('PUIsync on start up = ', PUIsync);
-			var PUIsync_height = PUIsync.boxObject.height; //parseInt(aDOMWindow.getComputedStyle(PUIsync, null).getPropertyValue('height'));
-			if (PanelUI.state != 'open' && PanelUI.state != 'showing') { //USED TO BE "if (PUIsync_height == 0)"
-				console.warn('PanelUI not open', PanelUI);
-				var unloaderId = new Date().getTime();
-				var createMenuOnPopup = function() {
-					PanelUI.removeEventListener('popupshowing', createMenuOnPopup, false);
-					delete unloaders[unloaderId];
-					console.warn('running loading into window to create menuuuuuuuuuu....');
-					windowListener.loadIntoWindow(aDOMWindow);
-				}
-				unloaders[unloaderId] = function() {
-					console.log('RUNNING UNLOADER');
-					PanelUI.removeEventListener('popupshowing', createMenuOnPopup, false);
-				}
-				PanelUI.addEventListener('popupshowing', createMenuOnPopup, false);
-				return;
-			}
+			//var PUIsync = PanelUI.querySelector('#PanelUI-fxa-status');
+			//console.info('PUIsync on start up = ', PUIsync);
+
 			var PUIf = PanelUI.querySelector('#PanelUI-footer');
 			var PUIcs = PanelUI.querySelector('#PanelUI-contents-scroller');
 			
 			//console.log('PUIcs.style.width',PUIcs.style.width);
 			var profilistHBoxJSON =
-			['xul:vbox', {id: 'profilist_box'},
-				['xul:stack', {key:'profilist_stack',style:'width:100%'}]
+			['xul:vbox', {id:'profilist_box'},
+				['xul:stack', {key:'profilist_stack', style:'width:100%;'},
+					['xul:toolbarbutton', {'id':'profilistLoading', label:'Loading Profiles...', disabled:'true', class:'PanelUI-profilist', status:'active', style:'-moz-appearance:none; padding:10px 0 10px 15px; margin-bottom:-1px; border-top:1px solid rgba(24,25,26,0.14); border-bottom:1px solid transparent; border-right:0 none rgb(0,0,0); border-left:0 none rgb(0,0,0);'}]
+				]
 			];
 			var referenceNodes = {};
 			PUIf.insertBefore(jsonToDOM(profilistHBoxJSON, aDOMWindow.document, referenceNodes), PUIf.firstChild);
-			
-			console.log('CREATING MENU JSON');
-			var PUIfi = PanelUI.querySelector('#PanelUI-footer-inner');
-			console.log('PUIsync height', PUIsync.boxObject);
-			console.log('PUIfi height', PUIfi.boxObject);
-			if (stackDOMJson.length == 0) {
-				console.log('stockDOMJson.length == 0');
-				stackDOMJson = [
-					{nodeToClone:PUIsync, identifier:'.create', label:'Create New Profile', class:'PanelUI-profilist create', id:null, oncommand:null, tooltiptext:null, signedin:null, defaultlabel:null, errorlabel:null,  status:null, addEventListener:['command',createProfile,false], style:'-moz-appearance:none; padding:10px 0 10px 15px; margin-bottom:-1px; border-top:1px solid rgba(24,25,26,0.14); border-bottom:1px solid transparent; border-right:0 none rgb(0,0,0); border-left:0 none rgb(0,0,0);'},
-					{nodeToClone:PUIsync, identifier:'[label="' + profToolkit.selectedProfile.name + '"]', label:profToolkit.selectedProfile.name, class:'PanelUI-profilist', id:null, oncommand:null, tooltiptext:null, signedin:null, defaultlabel:null, errorlabel:null, status:'active', addEventListener:['command', makeRename, false], style:'-moz-appearance:none; padding:10px 0 10px 15px; margin-bottom:-1px; border-top:1px solid rgba(24,25,26,0.14); border-bottom:1px solid transparent; border-right:0 none rgb(0,0,0); border-left:0 none rgb(0,0,0);', props:{profpath:activeProfpath}}
-				];
-			}
-			
-			updateMenuDOM(aDOMWindow, stackDOMJson);
-			
-			referenceNodes.profilist_stack.style.height = collapsedheight + 'px';
 
 			//todo: probably should only do this overflow stuff if scrollbar is not vis prior to mouseenter, but i think for usual case scrollbar is not vis.
 			referenceNodes.profilist_stack.addEventListener('mouseenter', function() {
 				if (referenceNodes.profilist_stack.lastChild.hasAttribute('disabled')) {
 					return;
 				}
-				PUIcs.style.overflow = 'hidden'; //prevents scrollbar from showing
+				var PUIcs_scrollsVis = PUIcs.scrollHeight - PUIcs.clientHeight > 0 ? true : false;
+				console.log('PUIcs_scrollsVis = ', PUIcs_scrollsVis);
+				if (!PUIcs_scrollsVis) {
+					PUIcs.style.overflow = 'hidden'; //prevents scrollbar from showing
+				}
+				console.log('expandedheight on expand = ' + expandedheight);
 				referenceNodes.profilist_stack.style.height = expandedheight + 'px';
 				referenceNodes.profilist_stack.lastChild.classList.add('perm-hover');
 			}, false);
 			referenceNodes.profilist_stack.addEventListener('mouseleave', function() {
-				/*//commenting out this block as using services prompt for renaming right now
-				if (aDOMWindow.ProfilistInRenameMode) {
-					console.log('in rename mdoe so dont close');
-					return;
-				}
-				*/
+				//commenting out this block as using services prompt for renaming right now
+				// if (aDOMWindow.ProfilistInRenameMode) {
+					// console.log('in rename mdoe so dont close');
+					// return;
+				// }
 				referenceNodes.profilist_stack.addEventListener('transitionend', function() {
 					referenceNodes.profilist_stack.removeEventListener('transitionend', arguments.callee, false);
 					if (referenceNodes.profilist_stack.style.height == collapsedheight + 'px') {
-						PUIcs.style.overflow = ''; //remove the hidden style i had forced on it
-						console.info('overflow RESET');
+						if (PUIcs.style.overflow == 'hidden') {
+							PUIcs.style.overflow = ''; //remove the hidden style i had forced on it
+							console.log('overflow RESET');
+						}
 					} else {
 						console.info('overflow not reset as height is not collapsed height (' + collapsedheight + ') but it is right now = ', referenceNodes.profilist_stack.style.height);
 					}
 				}, false);
+				console.log('collapsed height on collapse = ' + collapsedheight);
 				referenceNodes.profilist_stack.style.height = collapsedheight + 'px';
 				referenceNodes.profilist_stack.lastChild.classList.remove('perm-hover');
 			}, false);
@@ -1334,6 +1370,21 @@ var windowListener = {
 			console.log('aDOMWindow.gNavToolbox', aDOMWindow.gNavToolbox);
 			aDOMWindow.gNavToolbox.addEventListener('beforecustomization', beforecustomization, false);
 			aDOMWindow.gNavToolbox.addEventListener('customizationending', customizationending, false);
+			
+			if (PanelUI.state == 'open') { //USED TO BE "if (PUIsync_height == 0)"
+			
+				if (!registered) {
+					if (Object.keys(ini).length == 0) {
+						updateOnPanelShowing(null, aDOMWindow);
+					} else {
+						updateOnPanelShowing(null, aDOMWindow, 1); //for dont read ini //we also dont want it to updateStack but i dont think its an expensive operation so i didnt program the skip in
+						//updateMenuDOM(aDOMWindow, stackDOMJson);
+					}
+				} else {
+					//will get here on new window open AND of course panel.state  is open (i removed the .state==showing from the if)
+					updateOnPanelShowing(null, aDOMWindow);
+				}
+			}
 		}
 		
 	},
@@ -1424,12 +1475,12 @@ function jsonToDOM(xml, doc, nodes) {
 
 function startup(aData, aReason) {
 	console.log('in startup');
-	console.log('initing prof toolkit');
-	initProfToolkit();
-	console.log('init done');
-	updateProfToolkit(1, 1); //although i dont need the 2nd arg as its init
 	self.aData = aData; //must go first, because functions in loadIntoWindow use self.aData
 	console.log('aData', aData);
+	//console.log('initing prof toolkit');
+	//initProfToolkit();
+	//console.log('init done');
+	//updateProfToolkit(1, 1); //although i dont need the 2nd arg as its init
 	//var css = '.findbar-container {-moz-binding:url(' + self.path.chrome + 'findbar.xml#matchword_xbl)}';
 	//var cssEnc = encodeURIComponent(css);
 	var newURIParam = {

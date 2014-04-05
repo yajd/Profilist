@@ -1,4 +1,6 @@
--changed so stackUpdated updates all windows, this is required because on menu open it just refreshes ini and IF changed then it will update the menu, so if open in one window it updates there, then go open in another window it wont update as its already been updated
--removed dependence on querySelector for identifier, so now ident by label name even for "Create New Profile" (so removed that force rename and catastrophic failure stuff)
--updated pattern so can handle = signs in profile names
--bug: open 2 windows in Main. then in second window of Main open popup. Then from main of Main create a new profile. Then from new profile create another new profile. Then go to main window of Main and see that height of two tabs is missing so create profile button and first profile button will be missing.
+-made so detects if scrollbars vis on PUIcs, if its NOT vis then it wont hide them and do nothing on collapse, if it IS vis then it will hide them then reshow on collapse
+-:todo:it looks like expandedHeight should be cumHeight - 1 but i didnt implement this
+-:todo:watch out for content of stack showing someday, right now even with not specifying overflow:hidden the contents of stack doesnt show if the height is set to something less than max height
+-if panel is visible and if stack is empty and stack is set to height of 38px, its weird but the box comes out to be 50px;. no matter what if stack empty set stack to whatever height, the box is always stack height + 12 UNTIL you put a child into stack, weird
+-:learned: when trying to put a ProflistLoading id'ed toolbarbutton into stack it woundnt get added when first letter was caps
+-tested to see how it works when os.file lags, by using settimeout and what if stack was expanded, it is modified approparately now
