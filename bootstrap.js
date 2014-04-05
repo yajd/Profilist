@@ -785,11 +785,12 @@ function updateStackDOMJson_basedOnToolkit(dontUpdateStack, iDOMWindow) { //and 
 				if (posOfProfInStack > -1) {
 					stackPositionsAccountedFor.push(posOfProfInStack);
 					//check if any properties changed else continue
-					var justRenamed = false; //i had this as propsChanged but realized the only prop that can change is name and this happens on a rename so changed this to justRenamed. :todo: maybe im not sure but consider justDeleted
+					//var justRenamed = false; //i had this as propsChanged but realized the only prop that can change is name and this happens on a rename so changed this to justRenamed. :todo: maybe im not sure but consider justDeleted
 					if (stackDOMJson[posOfProfInStack].label != ini[p].props.Name) {
+						console.log('currently in menu the item "' + stackDOMJson[posOfProfInStack].label + '" was renamed to "' + ini[p].props.Name + '"');
 						stackDOMJson[posOfProfInStack].justRenamed = true;
 						stackDOMJson[posOfProfInStack].label = ini[p].props.Name;
-						justRenamed = true;
+						//justRenamed = true;
 						if (!stackUpdated) {
 							stackUpdated = true; //now stack is not really updated (stack is stackDOMJson but we set this to true becuase if stackUpdated==true then it physically updates all PanelUi
 							console.log('forcing stackUpdated as something was justRenamed');
@@ -798,9 +799,7 @@ function updateStackDOMJson_basedOnToolkit(dontUpdateStack, iDOMWindow) { //and 
 						}
 					}
 					continue; //contin as it even if it was renamed its not new so nothing to splice, and this profpath for ini[p] was found in stackDOMJson
-				}
-				
-
+				} else {
 					console.log('splicing p = ', ini[p], 'stackDOMjson=', stackDOMJson);
 					stackUpdated = true;
 					(function(pClosure) {
@@ -817,6 +816,7 @@ function updateStackDOMJson_basedOnToolkit(dontUpdateStack, iDOMWindow) { //and 
 							stackDOMJson.splice(0, 0, objToSplice);
 						}
 					})(p);
+				}
 			}
 			
 			/* if (!stackUpdated) {
@@ -841,7 +841,7 @@ function updateStackDOMJson_basedOnToolkit(dontUpdateStack, iDOMWindow) { //and 
 			if (stackUpdated) {
 				console.info('something was changed in stack so will update all menus now');
 				if (dontUpdateStack) {
-					console.warn('dontUpdateStack is set to true so will ABORTING update all menus');
+					console.warn('dontUpdateStack is set to true so ABORTING update all menus');
 				} else {
 					if (iDOMWindow) {
 						console.log('just updating iDOMWindow');
@@ -851,10 +851,19 @@ function updateStackDOMJson_basedOnToolkit(dontUpdateStack, iDOMWindow) { //and 
 						while (DOMWindows.hasMoreElements()) {
 							let aDOMWindow = DOMWindows.getNext();
 							if (aDOMWindow.document.querySelector('#profilist_box')) { //if this is true then the menu was already crated so lets update it, otherwise no need to update as we updated the stackDOMJson and the onPopupShowing will handle menu create
+								console.info('updatngMenuDOM on this window == ', 'aDOMWindow = ', aDOMWindow);
 								updateMenuDOM(aDOMWindow, stackDOMJson);
 							}
 						}
 					}
+					//now delete the justRenamed property, we have to delete the property after all windows are updated, otherwise only first window gets its toolbarbutton renmaed
+					//consider putting a if (somethingRenamed) { on this block :todo:
+					for (var i=0; i<stackDOMJson.length; i++) {
+						if (stackDOMJson[i].justRenamed) {
+							delete stackDOMJson[i].justRenamed;
+						}
+					}
+					//end now delete teh justRenamed property
 				}
 			}
 }
@@ -1107,7 +1116,7 @@ function updateMenuDOM(aDOMWindow, json) {
 			console.log('el idented');
 		}
 		if (!el.hasAttribute('top')) {
-			el.setAttribute('top', '0');
+			el.setAttribute('top', '0'); //this is important, it prevents toolbaritems from taking 100% height of the stacks its in
 		}
 		
 		if (appendChild) {
@@ -1131,7 +1140,7 @@ function updateMenuDOM(aDOMWindow, json) {
 			//if appendChild false then obviously idented
 			if ('justRenamed' in json[i]) {
 				console.log('it was justRenamed');
-				delete json[i].justRenamed;
+				//delete json[i].justRenamed; //cant delete this here, as if we are updating multiple windows, only the first window gets renamed properly
 				el.setAttribute('label', json[i].label);
 				console.log('label set');
 				json[i].identifer = '[label="' + json[i].label + '"]'; //have to do this here as needed the identifier to ident this el

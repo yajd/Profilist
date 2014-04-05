@@ -12,3 +12,5 @@
 -:learned: getComputedStyle always returns with units and i suspect its the units used by the css style applied (if no css style changed the height then it will default to 'px' i suspect)
 -:learned: boxObject is rounded value while getComputedStyle gives float value like if el.boxObject.height gives you 38px window.getComputedStyle(el).getPropertyValue('height') will be anything from 37.5px-38.4px
 -:todo: im thinking because right now (as i dont have access to file watcher) im always refreshingIni on show of popup, if after running create/delete/rename profile promise complete if the panel is open then refresh, if its not open then dont refresh
+-fixed: in `updateStackDOMJson_basedOnToolkit` it was splicing in every time, i corrected the if, im pretty sure its a bug fix, so it only splices if pos of path was -1 in stackJSON, i think this fixes the duplicate triplicate bug i just saw within the last hour of 1:37am
+-:bug: when renaming, if open menu, its still reading file, and before it finishes i go to rename and rename a profile, then toolbarbutton is blank in all windows for this renamed profile
