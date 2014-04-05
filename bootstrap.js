@@ -611,7 +611,7 @@ function updateOnPanelShowing(e, aDOMWindow, dontUpdateIni) {
 		var win = aDOMWindow;
 	} else {
 		console.log('e on panel showing = ', e);
-		console.log('e.view == e.target.ownerDocument.defaultView == ', e.view == e.target.ownerDocument.defaultView);
+		console.log('e.view == e.target.ownerDocument.defaultView == ', e.view == e.target.ownerDocument.defaultView); //is true!! at least when popup id is PanelUI-popup
 		if (e.target.id != 'PanelUI-popup') {
 			console.log('not main panel showing so dont updateProfToolkit');
 			return;
@@ -631,7 +631,10 @@ function updateOnPanelShowing(e, aDOMWindow, dontUpdateIni) {
 		var stack = PanelUI.querySelector('#profilist_box').childNodes[0];
 		//assume its supposed to be in collapsed state right now
 		if (collapsedheight != puisynch || stack.style.height == '') {
+			var oldCollapsedheight = collapsedheight;
+			//if collapsedheight != puisynch then obviously we have to set stack.style.height because we are assuming on popupshowing it should already be in collapsed style.height, (this is why i dont bother checking style.height) so if it is in this collapsed style.height then the last one used was the oldCollapsedheight obviously, so we want to set style.height as we are updating collapsedheight now to puisynch so set style.height to puisync too
 			collapsedheight = puisynch;
+			Cu.reportError('setting stack height to collapsedheight which = ' + collapsedheight);
 			stack.style.height = collapsedheight + 'px';
 		}
 		/*end if edit anything here make sure to copy updateOnPanelShowing*/
@@ -743,14 +746,14 @@ function updateStackDOMJson_basedOnToolkit(dontUpdateStack, iDOMWindow) { //and 
 				for (var i=0; i<stackDOMJson.length; i++) {
 					var m = stackDOMJson[i];
 					if ('props' in m && 'profpath' in m.props) {
-						if (!(m.props.pathname in profToolkit.pathsInIni)) {
+						if (profToolkit.pathsInIni.indexOf(m.props.profpath) == -1) {
 							//this is in the stack object but no longer exists so need to remove
-							console.log('m.props.profpath is not in ini = ', m.props.profpath)
+							console.log('m.props.profpath is not in pathsInIni = ', 'm.props.profpath=', m.props.profpath, 'pathsInIni=', profToolkit.pathsInIni, 'ini=', ini)
 							stackUpdated = true;
 							stackDOMJson.splice(i, 1); //this takes care of deletes
 							i--;
 						} else {
-							console.log('this stack value is in profToolkit', 'stack val = ', m.props.pathname, 'pathsInIni', profToolkit.pathsInIni);
+							console.log('this stack value is in profToolkit', 'stack val = ', m.props.profpath, 'pathsInIni', profToolkit.pathsInIni);
 							profNamesCurrentlyInMenu.push(m.props.profpath);
 						}
 					}
@@ -763,14 +766,14 @@ function updateStackDOMJson_basedOnToolkit(dontUpdateStack, iDOMWindow) { //and 
 			for (var p in ini) {
 				if (!('num' in ini[p])) { continue } //as its not a profile
 				var posOfProfInStack = -1; //actually cannot do this because have create profile button::::var posOfProfInStack = profNamesCurrentlyInMenu.indexOf(ini[p].props.Path); //identifies prop by path and gives location of it in stackDOMJson, this works because i do a for loop through stackDOMJson and create profNamesCurrentlyInMenu in that order
-				console.log('looking for position in stack of profpath = ', ini[p].props.Path);
+				console.log('looking for position in stack of profpath ', 'profpath = ', ini[p].props.Path);
 				for (var i=0; i<stackDOMJson.length; i++) {
 					if ('props' in stackDOMJson[i]) {
 						if (stackDOMJson[i].props.profpath == ini[p].props.Path) {
 							posOfProfInStack = i;
 							break;
 						} else {
-							console.log('stackDOMJson[i].props.profpath != ini[p].props.Path', stackDOMJson[i].props.profpath, ini[p].props.Path);
+							//console.log('stackDOMJson[i].props.profpath != ini[p].props.Path', stackDOMJson[i].props.profpath, ini[p].props.Path);
 							continue; //dont really need continue as there is no code below in this for but ya
 						}
 					} else {
@@ -855,47 +858,6 @@ function updateStackDOMJson_basedOnToolkit(dontUpdateStack, iDOMWindow) { //and 
 				}
 			}
 }
-
-var observers = {
-    /*
-    inlineOptsHid: {
-        observe:    function(aSubject, aTopic, aData) {
-                        //##Cu.reportError('incoming inlineOptsHid: aSubject = ' + aSubject + ' | aTopic = ' + aTopic + ' | aData = ' + aData);
-                        if (aTopic == 'addon-options-hidden' && aData == selfId + '@jetpack') {
-                            addonMgrXulWin = null; //trial as of 112713
-                        }
-                    },
-        reg:    function() {
-                obs.addObserver(observers.inlineOptsHid, 'addon-options-hidden', false);
-            },
-        unreg:    function() {
-                obs.removeObserver(observers.inlineOptsHid, 'addon-options-hidden');
-            }
-    }
-    */
-    /* 'profile-do-change': {
-        observe: function(aSubject, aTopic, aData) {
-			console.info('incoming profile-do-change: aSubject = ' + aSubject + ' | aTopic = ' + aTopic + ' | aData = ' + aData);
-        },
-        reg: function() {
-			Services.obs.addObserver(observers['profile-do-change'], 'profile-do-change', false);
-        },
-        unreg: function() {
-			Services.obs.removeObserver(observers['profile-do-change'], 'profile-do-change');
-        }
-    },
-    'profile-before-change': {
-        observe: function(aSubject, aTopic, aData) {
-			console.info('incoming profile-before-change: aSubject = ' + aSubject + ' | aTopic = ' + aTopic + ' | aData = ' + aData);
-        },
-        reg: function() {
-			Services.obs.addObserver(observers['profile-before-change'], 'profile-before-change', false);
-        },
-        unreg: function() {
-			Services.obs.removeObserver(observers['profile-before-change'], 'profile-before-change');
-        }
-    } */
-};
 
 var renameTimeouts = [];
 
@@ -1060,7 +1022,7 @@ function launchProfile(e, profName, suppressAlert, url) {
 }
 
 function createUnnamedProfile() {
-	//creating profile with name that already exists does nothing	
+	//creating profile with name that already exists does nothing
 	var promise = readIni();
 	promise.then(
 		function() {
@@ -1187,7 +1149,7 @@ function updateMenuDOM(aDOMWindow, json) {
 				//elHeight = parseFloat(elHeight);
 				console.log('elHeight was 0 but just appendedChild so assuming cloned node height which is', elHeight);
 			} else {
-				console.error('ERROR deal with this, elHeight was 0 and it was NOT just appended so cannot assume cloned node height');
+				console.log('elHeight was 0 and it was NOT just appended so cannot assume cloned node height');
 			}
 		}
 		el.style.height = elHeight + 'px';
@@ -1215,9 +1177,15 @@ function updateMenuDOM(aDOMWindow, json) {
 
 	}
 	if (expandedheight != cumHeight) {
+		console.log('glboal var of expandedheight does not equal new calced cumheight so update it now', 'expandedheight pre update = ', expandedheight, 'cumHeight=', cumHeight);
 		var oldExpandedheight = expandedheight;
 		expandedheight = cumHeight;
-		if (stack.boxObject.height == oldExpandedheight) {
+		Cu.reportError('oldExpandedheight = ' + oldExpandedheight);
+		Cu.reportError('stack.boxObject.height = ' + stack.boxObject.height);
+		Cu.reportError('stack.style.height = ' + stack.style.height);
+		Cu.reportError('aDOMWindow.getComputedStyle(stack).getPropertyValue(\'height\') = ' + aDOMWindow.getComputedStyle(stack).getPropertyValue('height'));
+		if (parseInt(stack.style.height) == oldExpandedheight) {
+			Cu.reportError('setting stack height to expandedheight which = ' + expandedheight);
 			stack.style.height = expandedheight + 'px';
 			console.warn('stack.boxObject.height EQUALS oldExpandedheight', 'oldExpandedheight', oldExpandedheight, 'stack.boxObject.height', stack.boxObject.height)
 		} else {
@@ -1341,6 +1309,7 @@ var windowListener = {
 					PUIcs.style.overflow = 'hidden'; //prevents scrollbar from showing
 				}
 				console.log('expandedheight on expand = ' + expandedheight);
+				Cu.reportError('setting stack height to expandedheight which = ' + expandedheight);
 				referenceNodes.profilist_stack.style.height = expandedheight + 'px';
 				referenceNodes.profilist_stack.lastChild.classList.add('perm-hover');
 			}, false);
@@ -1361,8 +1330,9 @@ var windowListener = {
 						console.info('overflow not reset as height is not collapsed height (' + collapsedheight + ') but it is right now = ', referenceNodes.profilist_stack.style.height);
 					}
 				}, false);
-				console.log('collapsed height on collapse = ' + collapsedheight);
+				Cu.reportError('setting stack height to collapsedheight which = ' + collapsedheight);
 				referenceNodes.profilist_stack.style.height = collapsedheight + 'px';
+				console.log('collapsed height on collapse == ', 'stack.boxObject.height = ', referenceNodes.profilist_stack.boxObject.height, 'stack.style.height = ', referenceNodes.profilist_stack.style.height);
 				referenceNodes.profilist_stack.lastChild.classList.remove('perm-hover');
 			}, false);
 			//PanelUI.addEventListener('popuphiding', prevHide, false);
@@ -1493,20 +1463,11 @@ function startup(aData, aReason) {
 	
 	windowListener.register();
 	
-	//register all observers
-	for (var o in observers) {
-		observers[o].reg();
-	}
 }
 
 function shutdown(aData, aReason) {
 	if (aReason == APP_SHUTDOWN) return;
-	
-	//unregister all observers
-	for (var o in observers) {
-		observers[o].unreg();
-	}
-	
+		
 	myServices.sss.unregisterSheet(cssUri, myServices.sss.USER_SHEET);
 	
 	windowListener.unregister();
