@@ -692,6 +692,12 @@ function updateProfToolkit(refreshIni, refreshStack, iDOMWindow) {
 		console.info('profToolkit.selectedProfile.name = ', profToolkit.selectedProfile.name);
 		console.info('selectedProfileNameFound = ', selectedProfileNameFound);
 
+					console.info('selectedProfile info for rel profToolkit.selectedProfile.rootDirName=', profToolkit.selectedProfile.rootDirName);
+					console.info('selectedProfile info for rel profToolkit.selectedProfile.localDirName=', profToolkit.selectedProfile.localDirName);
+					
+					console.info('selectedProfile info for abs profToolkit.selectedProfile.rootDirPath=', profToolkit.selectedProfile.rootDirPath);
+					console.info('selectedProfile info for abs profToolkit.selectedProfile.localDirPath=', profToolkit.selectedProfile.localDirPath);
+					
 		if (!selectedProfileNameFound) {
 			console.log('looking for selectedProfile name');
 			for (var p in ini) {
@@ -704,8 +710,7 @@ function updateProfToolkit(refreshIni, refreshStack, iDOMWindow) {
 					var iniDirName = OS.Path.basename(OS.Path.normalize(ini[p].props.Path));
 					
 					console.info('rel iniDirName=', iniDirName);
-					console.info('rel profToolkit.selectedProfile.rootDirName=', profToolkit.selectedProfile.rootDirName);
-					console.info('rel profToolkit.selectedProfile.localDirName=', profToolkit.selectedProfile.localDirName);
+
 
 					if (iniDirName == profToolkit.selectedProfile.rootDirName) {
 						console.log('iniDirName matches profToolkit.selectedProfile.rootDirName so set selectedProfile.name to this ini[p].Name', 'iniDirName', iniDirName, 'ini[p]=', ini[p], 'profToolkit=', profToolkit);
@@ -720,8 +725,6 @@ function updateProfToolkit(refreshIni, refreshStack, iDOMWindow) {
 				} else {
 					console.log('ini[p] is absolute',ini[p]);
 					console.info('abs ini[p].props.Path=', ini[p].props.Path);
-					console.info('abs profToolkit.selectedProfile.rootDirPath=', profToolkit.selectedProfile.rootDirPath);
-					console.info('abs profToolkit.selectedProfile.localDirPath=', profToolkit.selectedProfile.localDirPath);
 					
 					if (ini[p].props.Path == profToolkit.selectedProfile.rootDirPath) {
 						console.log('ini[p].Path matches profToolkit.selectedProfile.rootDirPath so set selectedProfile.name to this ini[p].Name', 'ini[p]=', ini[p], 'profToolkit=', profToolkit);
