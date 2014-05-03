@@ -13,6 +13,8 @@ var stackDOMJson = []; //array holding menu structure in stack /*:note: :importa
 var unloaders = {};
 var PUIsync_height = 0;
 var PUIsync;
+var mRootDir; //used to calculate relpath for ini
+var rootPathDefaultFile;
 
 const { TextEncoder, TextDecoder } = Cu.import("resource://gre/modules/commonjs/toolkit/loader.js", {});
 Cu.import('resource://gre/modules/Services.jsm');
@@ -197,12 +199,29 @@ function createProfile(refreshIni, profName) {
 		//check if profile exists first
 		var numProfiles = profToolkit.profileCount; //Object.keys(ini) - 1;
 		var dirName = saltName(profName);
+		
+		//get relative path
+		var dummyAppend = 'DUMMY';
+		if (!mRootDir) {
+			mRootDir = new FileUtils.File(OS.Constants.Path.userApplicationDataDir);
+			mRootDir.append(dummyAppend);
+		}
+		var IniPathStr = new FileUtils.File(OS.Constants.Path.userApplicationDataDir); //start at root dir
+		var profDirRelToRoot = rootPathDefaultFile.getRelativeDescriptor(IniPathStr);
+		IniPathStr.appendRelativePath(profDirRelToRoot); //append profiles.ini folder //have to use appendRelativePath because if profDirRelToRoot is not a single folder name or blank we cannot use append it throws error: "Exception: Component returned failure code: 0x80520001 (NS_ERROR_FILE_UNRECOGNIZED_PATH) [nsILocalFile.append]"
+		IniPathStr.append(dirName); //append profile folder
+		
+		var replaceThis = mRootDir.path.substr(0, mRootDir.path.length-dummyAppend.length); //because i want to replace the first / or \ or whatever the os uses so we append dummy then just substr out the folder name but leave the path divider/seperator
+		IniPathStr = IniPathStr.path.replace(replaceThis, ''); //issue on windows is that this outputs as "Profiles\dirName" however when create profile with profile manager it outputs as "Profiles/dirName", it doesnt seem to cause any issues though
+		IniPathStr = IniPathStr.replace(/\\/g, '/');
+		
+		//end get relative path
 		ini[profName] = {
 			num: numProfiles,
 			props: {
 				Name: profName,
 				IsRelative: 1,
-				Path: 'Profiles/' + dirName
+				Path: IniPathStr
 			}
 		}
 		console.log('created ini entry for profName', ini[profName]);
@@ -558,7 +577,8 @@ function initProfToolkit() {
 		} //reference to the profiles object but to the current profile in the profiles object
 	};
 	
-	profToolkit.rootPathDefault = FileUtils.getFile('DefProfRt', []).path; //following method does not work on custom profile: OS.Path.dirname(OS.Constants.Path.localProfileDir); //will work as long as at least one profile is in the default profile folder //i havent tested when only custom profile
+	rootPathDefaultFile = FileUtils.getFile('DefProfRt', []);
+	profToolkit.rootPathDefault = rootPathDefaultFile.path; //following method does not work on custom profile: OS.Path.dirname(OS.Constants.Path.localProfileDir); //will work as long as at least one profile is in the default profile folder //i havent tested when only custom profile
 	console.log('initProfToolkit 1');
 	profToolkit.localPathDefault = FileUtils.getFile('DefProfLRt', []).path; //following method does not work on custom profile: OS.Path.dirname(OS.Constants.Path.profileDir);
 	console.log('initProfToolkit 2');
