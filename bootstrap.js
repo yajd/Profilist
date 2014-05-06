@@ -633,7 +633,7 @@ function updateOnPanelShowing(e, aDOMWindow, dontUpdateIni) {
 		}
 	}
 		/*if edit anything here make sure to copy updateOnPanelShowing*/
-		if (PUIsync_height === undefined) {
+		if (!PUIsync_height) {
 			PUIsync_height = PanelUI.querySelector('#profilistLoading');
 			if (!PUIsync_height) {
 				Services.wm.getMostRecentWindow(null).alert('errrror PUIsync_height is undefined and profilistLoading is not there so cannot obtain height so assuming height of 38');
