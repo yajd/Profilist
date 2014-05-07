@@ -13,6 +13,8 @@ var stackDOMJson = []; //array holding menu structure in stack /*:note: :importa
 var unloaders = {};
 var PUIsync_height;
 var PUIsync;
+var isPortable = true;
+var customCreatePath = 0; //'C:\\Users\\3K2KYC1\\Desktop\\FirefoxPortable\\Data';
 
 const { TextEncoder, TextDecoder } = Cu.import("resource://gre/modules/commonjs/toolkit/loader.js", {});
 Cu.import('resource://gre/modules/Services.jsm');
@@ -25,7 +27,36 @@ XPCOMUtils.defineLazyGetter(myServices, 'sss', function(){ return Cc['@mozilla.o
 XPCOMUtils.defineLazyGetter(myServices, 'tps', function(){ return Cc['@mozilla.org/toolkit/profile-service;1'].createInstance(Ci.nsIToolkitProfileService) });
 XPCOMUtils.defineLazyGetter(myServices, 'as', function () { return Cc["@mozilla.org/alerts-service;1"].getService(Ci.nsIAlertsService) });
 
-var pathProfilesIni = OS.Path.join(OS.Constants.Path.userApplicationDataDir, 'profiles.ini');
+var installDirPath = '';
+//ACTUALY I DONT KNOW BUT MAYBE: note if portable, on launch of another profile, i have to first copy the profiles.ini file in the area it expects then launch it, after launching i can delete the profiles.ini
+if (isPortable) {
+	installDirPath = FileUtils.getFile('XREExeF', []).parent.parent.parent.path;
+	customCreatePath = OS.Path.join(installDirPath, 'Data');
+	var pathProfilesIni = OS.Path.join(installDirPath, 'profiles.ini'); //'C:\\Users\\3K2KYC1\\Desktop\\FirefoxPortable\\profiles.ini'; //OS.Path.join(OS.Constants.Path.userApplicationDataDir, 'profiles.ini');
+	if (!encoder) {
+		encoder = new TextEncoder(); // This encoder can be reused for several writes
+	}
+	var defaultPathToDefaultProfile = OS.Path.join(customCreatePath, 'profile');
+	let iniBufferArray = encoder.encode('[General]\nStartWithLastProfile=0\n\n[Profile0]\nName=default\nIsRelative=0\nPath=' + defaultPathToDefaultProfile + '\nDefault=1');
+	let promiseIni = OS.File.writeAtomic(pathProfilesIni, iniBufferArray,
+		{
+			tmpPath: pathProfilesIni + '.tmp',
+			noOverwrite: true //so if it exists then it doesnt write it
+		}
+	);
+	promiseIni.then(
+		function() {
+			console.log('succesfully created profiles.ini');
+		},
+		function() {
+			console.error('FAILED creating profiles.ini');
+			return new Error('FAILED creating profiles.ini');
+		}
+	);
+	var appExpectedProfilesPath = OS.Path.join(OS.Constants.Path.userApplicationDataDir, 'profiles.ini'); //on launch of firefox it expects to find profiles.ini here
+} else {
+	var pathProfilesIni = OS.Path.join(OS.Constants.Path.userApplicationDataDir, 'profiles.ini');
+}
 var ini = {};
 var profToolkit = {
 	rootPathDefault: 0,
@@ -214,82 +245,142 @@ function createProfile(refreshIni, profName) {
 		}
 		console.log('created ini entry for profName', ini[profName]);
 
-		var rootPathDefaultDirName = OS.Path.join(profToolkit.rootPathDefault, dirName);
-		var localPathDefaultDirName = OS.Path.join(profToolkit.localPathDefault, dirName);
-		console.log('rootPathDefaultDirName=',rootPathDefaultDirName);
-		console.log('localPathDefaultDirName=',localPathDefaultDirName);
-		
-		var profilesIniUpdateDone;
-		var rootDirMakeDirDone;
-		var localDirMakeDirDone;
-		var checkReadyAndLaunch = function() {
-			if (!profilesIniUpdateDone) {
-				console.warn('profiles ini update not yet done');
-			}
-			if (!rootDirMakeDirDone) {
-				console.warn('root dir not yet made');
-			}
-			if (profToolkit.rootPathDefault == profToolkit.localPathDefault) {
-				localDirMakeDirDone = true; //i dont have to check if rootDirMakeDirDone to set this to true, because when both paths are same we dont make a local dir
-			}
-			if (!localDirMakeDirDone) {
-				console.warn('local dir not yet made');
-			}
-			if (profilesIniUpdateDone && rootDirMakeDirDone && localDirMakeDirDone) {
-				myServices.as.showAlertNotification(self.aData.resourceURI.asciiSpec + 'icon.png', self.name + ' - ' + 'Creating Profile', 'Default Name: "' + profName + '"', false, null, null, 'Profilist');
-				launchProfile(null, profName, 1, self.aData.installPath.path);
-				console.log('profile launched and now updating prof toolkit with refreshIni 1');
-				return updateProfToolkit(1, 1);
-			}
-		}
-		console.log('starting promise for make root dir');
-		var PromiseAllArr = [];
-		var promise = OS.File.makeDir(rootPathDefaultDirName);
-		promise.then(
-			function() {
-				console.log('successfully created root dir for profile ' + profName + ' the path is = ', rootPathDefaultDirName);
-				if (!encoder) {
-					encoder = new TextEncoder(); // This encoder can be reused for several writes
+		if (!isPortable) {
+			var rootPathDefaultDirName = OS.Path.join(profToolkit.rootPathDefault, dirName);
+			var localPathDefaultDirName = OS.Path.join(profToolkit.localPathDefault, dirName);
+			console.log('rootPathDefaultDirName=',rootPathDefaultDirName);
+			console.log('localPathDefaultDirName=',localPathDefaultDirName);
+			
+			var profilesIniUpdateDone;
+			var rootDirMakeDirDone;
+			var localDirMakeDirDone;
+			var checkReadyAndLaunch = function() {
+				if (!profilesIniUpdateDone) {
+					console.warn('profiles ini update not yet done');
 				}
-					let BufferArray = encoder.encode('{\n"created": ' + new Date().getTime() + '}\n');
-					let promise3 = OS.File.writeAtomic(OS.Path.join(rootPathDefaultDirName, 'times.json'), BufferArray,
-						{
-							tmpPath: OS.Path.join(rootPathDefaultDirName, 'times.json') + '.profilist.tmp'
-						}
-					);
-					promise3.then(
-						function() {
-							console.log('succesfully created times.json for profName of ' + profName + ' path is = ', OS.Path.join(rootPathDefaultDirName, 'times.json'));
-							rootDirMakeDirDone = true;
-							checkReadyAndLaunch();
-						},
-						function() {
-							console.error('FAILED creating times.json for profName of ' + profName + ' failed times.json path is = ', OS.Path.join(rootPathDefaultDirName, 'times.json'));
-							return new Error('FAILED creating times.json for profName of ' + profName + ' failed times.json path is = ', OS.Path.join(rootPathDefaultDirName, 'times.json'));
-						}
-					);
-					return promise3;
-			},
-			function() {
-				console.error('FAILED to create root dir for profile ' + profName + ' the path is = ', rootPathDefaultDirName);
-				return new Error('FAILED to create root dir for profile ' + profName + ' the path is = ' + rootPathDefaultDirName);
+				if (!rootDirMakeDirDone) {
+					console.warn('root dir not yet made');
+				}
+				if (profToolkit.rootPathDefault == profToolkit.localPathDefault) {
+					localDirMakeDirDone = true; //i dont have to check if rootDirMakeDirDone to set this to true, because when both paths are same we dont make a local dir
+				}
+				if (!localDirMakeDirDone) {
+					console.warn('local dir not yet made');
+				}
+				if (profilesIniUpdateDone && rootDirMakeDirDone && localDirMakeDirDone) {
+					myServices.as.showAlertNotification(self.aData.resourceURI.asciiSpec + 'icon.png', self.name + ' - ' + 'Creating Profile', 'Default Name: "' + profName + '"', false, null, null, 'Profilist');
+					launchProfile(null, profName, 1, self.aData.installPath.path);
+					console.log('profile launched and now updating prof toolkit with refreshIni 1');
+					return updateProfToolkit(1, 1);
+				}
 			}
-		);
-		PromiseAllArr.push(promise);
-		if (profToolkit.rootPathDefault != profToolkit.localPathDefault) {
-			var promise2 = OS.File.makeDir(localPathDefaultDirName);
-			promise2.then(
+			console.log('starting promise for make root dir');
+			var PromiseAllArr = [];
+			var promise = OS.File.makeDir(rootPathDefaultDirName);
+			promise.then(
 				function() {
-					console.log('successfully created local dir for profile ' + profName + ' the path is = ', localPathDefaultDirName);
-					localDirMakeDirDone = true;
-					checkReadyAndLaunch();
+					console.log('successfully created root dir for profile ' + profName + ' the path is = ', rootPathDefaultDirName);
+					if (!encoder) {
+						encoder = new TextEncoder(); // This encoder can be reused for several writes
+					}
+						let BufferArray = encoder.encode('{\n"created": ' + new Date().getTime() + '}\n');
+						let promise3 = OS.File.writeAtomic(OS.Path.join(rootPathDefaultDirName, 'times.json'), BufferArray,
+							{
+								tmpPath: OS.Path.join(rootPathDefaultDirName, 'times.json') + '.profilist.tmp'
+							}
+						);
+						promise3.then(
+							function() {
+								console.log('succesfully created times.json for profName of ' + profName + ' path is = ', OS.Path.join(rootPathDefaultDirName, 'times.json'));
+								rootDirMakeDirDone = true;
+								checkReadyAndLaunch();
+							},
+							function() {
+								console.error('FAILED creating times.json for profName of ' + profName + ' failed times.json path is = ', OS.Path.join(rootPathDefaultDirName, 'times.json'));
+								return new Error('FAILED creating times.json for profName of ' + profName + ' failed times.json path is = ', OS.Path.join(rootPathDefaultDirName, 'times.json'));
+							}
+						);
+						return promise3;
 				},
 				function() {
-					console.error('FAILED to create local dir for profile "' + profName + '" the path is = ', localPathDefaultDirName);
-					return new Error('FAILED to create local dir for profile "' + profName + '" the path is = ' + localPathDefaultDirName);
+					console.error('FAILED to create root dir for profile ' + profName + ' the path is = ', rootPathDefaultDirName);
+					return new Error('FAILED to create root dir for profile ' + profName + ' the path is = ' + rootPathDefaultDirName);
 				}
 			);
-			PromiseAllArr.push(promise2);
+			PromiseAllArr.push(promise);
+			if (profToolkit.rootPathDefault != profToolkit.localPathDefault) {
+				var promise2 = OS.File.makeDir(localPathDefaultDirName);
+				promise2.then(
+					function() {
+						console.log('successfully created local dir for profile ' + profName + ' the path is = ', localPathDefaultDirName);
+						localDirMakeDirDone = true;
+						checkReadyAndLaunch();
+					},
+					function() {
+						console.error('FAILED to create local dir for profile "' + profName + '" the path is = ', localPathDefaultDirName);
+						return new Error('FAILED to create local dir for profile "' + profName + '" the path is = ' + localPathDefaultDirName);
+					}
+				);
+				PromiseAllArr.push(promise2);
+			}
+		} else {
+			//if isPortable is true
+			var rootPathDefaultDirName = OS.Path.join(profToolkit.rootPathDefault, dirName);
+			console.log('rootPathDefaultDirName=',rootPathDefaultDirName);
+			
+			var profilesIniUpdateDone;
+			var localDirMakeDirDone;
+			var checkReadyAndLaunch = function() {
+				if (!profilesIniUpdateDone) {
+					console.warn('profiles ini update not yet done');
+				}
+				if (!rootDirMakeDirDone) {
+					console.warn('root dir not yet made');
+				}
+				if (profilesIniUpdateDone && rootDirMakeDirDone) {
+					myServices.as.showAlertNotification(self.aData.resourceURI.asciiSpec + 'icon.png', self.name + ' - ' + 'Creating Profile', 'Default Name: "' + profName + '"', false, null, null, 'Profilist');
+					launchProfile(null, profName, 1, self.aData.installPath.path);
+					console.log('profile launched and now updating prof toolkit with refreshIni 1');
+					return updateProfToolkit(1, 1);
+				}
+			}
+			console.log('starting promise for make root dir');
+			var PromiseAllArr = [];
+			var promise = OS.File.makeDir(rootPathDefaultDirName);
+			promise.then(
+				function() {
+					console.log('successfully created root dir for profile ' + profName + ' the path is = ', rootPathDefaultDirName);
+					if (!encoder) {
+						encoder = new TextEncoder(); // This encoder can be reused for several writes
+					}
+						let BufferArray = encoder.encode('{\n"created": ' + new Date().getTime() + '}\n');
+						let promise3 = OS.File.writeAtomic(OS.Path.join(rootPathDefaultDirName, 'times.json'), BufferArray,
+							{
+								tmpPath: OS.Path.join(rootPathDefaultDirName, 'times.json') + '.profilist.tmp'
+							}
+						);
+						promise3.then(
+							function() {
+								console.log('succesfully created times.json for profName of ' + profName + ' path is = ', OS.Path.join(rootPathDefaultDirName, 'times.json'));
+								rootDirMakeDirDone = true;
+								checkReadyAndLaunch();
+							},
+							function() {
+								console.error('FAILED creating times.json for profName of ' + profName + ' failed times.json path is = ', OS.Path.join(rootPathDefaultDirName, 'times.json'));
+								return new Error('FAILED creating times.json for profName of ' + profName + ' failed times.json path is = ', OS.Path.join(rootPathDefaultDirName, 'times.json'));
+							}
+						);
+						return promise3;
+				},
+				function() {
+					console.error('FAILED to create root dir for profile ' + profName + ' the path is = ', rootPathDefaultDirName);
+					return new Error('FAILED to create root dir for profile ' + profName + ' the path is = ' + rootPathDefaultDirName);
+				}
+			);
+			PromiseAllArr.push(promise);
+			
+			ini[profName].props.IsRelative = 0;
+			ini[profName].props.Path = OS.Path.join(profToolkit.rootPathDefault, dirName);
 		}
 		var promise4 = writeIni();
 		promise4.then(
@@ -569,10 +660,15 @@ function initProfToolkit() {
 		} //reference to the profiles object but to the current profile in the profiles object
 	};
 	
-	profToolkit.rootPathDefault = FileUtils.getFile('DefProfRt', []).path; //following method does not work on custom profile: OS.Path.dirname(OS.Constants.Path.localProfileDir); //will work as long as at least one profile is in the default profile folder //i havent tested when only custom profile
-	console.log('initProfToolkit 1');
-	profToolkit.localPathDefault = FileUtils.getFile('DefProfLRt', []).path; //following method does not work on custom profile: OS.Path.dirname(OS.Constants.Path.profileDir);
-	console.log('initProfToolkit 2');
+	if (!isPortable) {
+		profToolkit.rootPathDefault = FileUtils.getFile('DefProfRt', []).path; //following method does not work on custom profile: OS.Path.dirname(OS.Constants.Path.localProfileDir); //will work as long as at least one profile is in the default profile folder //i havent tested when only custom profile
+		console.log('initProfToolkit 1');
+		profToolkit.localPathDefault = FileUtils.getFile('DefProfLRt', []).path; //following method does not work on custom profile: OS.Path.dirname(OS.Constants.Path.profileDir);
+		console.log('initProfToolkit 2');
+	} else {
+		profToolkit.rootPathDefault = customCreatePath; //'C:\\Users\\3K2KYC1\\Desktop\\FirefoxPortable\\Data';
+		profToolkit.localPathDefault = customCreatePath; //'C:\\Users\\3K2KYC1\\Desktop\\FirefoxPortable\\Data';
+	}
 
 	profToolkit.selectedProfile.rootDirName = OS.Path.basename(OS.Constants.Path.profileDir);
 	profToolkit.selectedProfile.localDirName = OS.Path.basename(OS.Constants.Path.localProfileDir);
@@ -1298,15 +1394,39 @@ function launchProfile(e, profName, suppressAlert, url) {
 	}
 
 	var exe = FileUtils.getFile('XREExeF', []); //this gives path to executable
-	var process = Cc['@mozilla.org/process/util;1'].createInstance(Ci.nsIProcess);
-	process.init(exe);
 	
-	var args = ['-P', profName, '-no-remote']; //-new-instance
-	if (url) {
-		args.push('about:home');
-		args.push(url);
+	var doLaunch = function() {
+		var process = Cc['@mozilla.org/process/util;1'].createInstance(Ci.nsIProcess);
+		process.init(exe);
+		
+		var args = ['-P', profName, '-no-remote']; //-new-instance
+		if (url) {
+			args.push('about:home');
+			args.push(url);
+		}
+		process.run(false, args, args.length);
+		
+		//if portable: after succesfully starting up, i should make it delete profiles.ini
 	}
-	process.run(false, args, args.length);
+	
+	if (!isPortable) {
+		doLaunch();
+	} else {
+		/*
+		var copyPromise = OS.File.copy(pathProfilesIni, appExpectedProfilesPath);
+		copyPromise.then(
+			function() {
+				console.error('copy of profiles.ini success');
+				doLaunch();
+			},
+			function onRej(aRejectReason) {
+				console.error('copy of profiles.ini failed due to aRejectReason = ', aRejectReason);
+				return new Error('copy of profiles.ini failed due to aRejectReason = ', aRejectReason);
+			}
+		);
+		*/
+		doLaunch();
+	}
 }
 
 function createUnnamedProfile() {
