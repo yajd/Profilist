@@ -1400,7 +1400,11 @@ function launchProfile(e, profName, suppressAlert, url) {
 		var process = Cc['@mozilla.org/process/util;1'].createInstance(Ci.nsIProcess);
 		process.init(exe);
 		
-		var args = ['-P', profName, '-no-remote']; //-new-instance
+		if (!isPortable) {
+			var args = ['-P', profName, '-no-remote']; //-new-instance
+		} else {
+			var args = ['-P', OS.Path.normalize(ini[profName].props.Path), '-no-remote']; //-new-instance
+		}
 		if (url) {
 			args.push('about:home');
 			args.push(url);
@@ -1413,6 +1417,7 @@ function launchProfile(e, profName, suppressAlert, url) {
 	if (!isPortable) {
 		doLaunch();
 	} else {
+		/*
 		var copyPromise = OS.File.copy(pathProfilesIni, appExpectedProfilesPath);
 		copyPromise.then(
 			function() {
@@ -1424,6 +1429,8 @@ function launchProfile(e, profName, suppressAlert, url) {
 				return new Error('copy of profiles.ini failed due to aRejectReason = ', aRejectReason);
 			}
 		);
+		*/
+		doLaunch();
 	}
 }
 
