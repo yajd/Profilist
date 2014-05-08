@@ -88,7 +88,7 @@ function readIni() {
 	console.log('read promise started');
 	promise = promise.then(
 		function(ArrayBuffer) {
-			var readStr = decoder.decode(ArrayBuffer); // Convert this array to a text
+			var readStr = decoder.decode(ArrayBuffer); // Convert this array to a textargs
 			//console.log(readStr);
 			ini = {};
 			var patt = /\[(.*?)(\d*?)\](?:\s+?(.+?)=(.+))(?:\s+?(.+?)=(.+))?(?:\s+?(.+?)=(.+))?(?:\s+?(.+?)=(.+))?(?:\s+?(.+?)=(.+))?/mg;
@@ -1403,8 +1403,10 @@ function launchProfile(e, profName, suppressAlert, url) {
 		if (!isPortable) {
 			var args = ['-P', profName, '-no-remote']; //-new-instance
 		} else {
-			var args = ['-P', OS.Path.normalize(ini[profName].props.Path), '-no-remote']; //-new-instance
+			var args = ['-profile', ini[profName].props.Path, '-no-remote']; //-new-instance
+			//Services.prompt.alert(null, '', 'using path to launch = ' + args[1])
 		}
+		
 		if (url) {
 			args.push('about:home');
 			args.push(url);
