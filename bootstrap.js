@@ -30,13 +30,14 @@ XPCOMUtils.defineLazyGetter(myServices, 'as', function () { return Cc["@mozilla.
 var installDirPath = '';
 //ACTUALY I DONT KNOW BUT MAYBE: note if portable, on launch of another profile, i have to first copy the profiles.ini file in the area it expects then launch it, after launching i can delete the profiles.ini
 if (isPortable) {
-	installDirPath = FileUtils.getFile('XREExeF', []).parent.parent.parent.path;
-	customCreatePath = OS.Path.join(installDirPath, 'D:\\Program Files (x86)\\Firefox\\other');
-	var pathProfilesIni = OS.Path.join(installDirPath, 'D:\\Program Files (x86)\\Firefox\\profiles.ini'); //'C:\\Users\\3K2KYC1\\Desktop\\FirefoxPortable\\profiles.ini'; //OS.Path.join(OS.Constants.Path.userApplicationDataDir, 'profiles.ini');
+	installDirPath = FileUtils.getFile('CurWorkD', []).path;
+	var defaultProfileFile = FileUtils.getFile('ProfD', []);
+	customCreatePath = defaultProfileFile.parent.path;
+	var pathProfilesIni = OS.Path.join(installDirPath, 'profiles.ini'); //'C:\\Users\\3K2KYC1\\Desktop\\FirefoxPortable\\profiles.ini'; //OS.Path.join(OS.Constants.Path.userApplicationDataDir, 'profiles.ini');
 	if (!encoder) {
 		encoder = new TextEncoder(); // This encoder can be reused for several writes
 	}
-	var defaultPathToDefaultProfile = OS.Path.join(customCreatePath, 'D:\\Program Files (x86)\\Firefox\\other');
+	var defaultPathToDefaultProfile = defaultProfileFile.path;
 	let iniBufferArray = encoder.encode('[General]\nStartWithLastProfile=0\n\n[Profile0]\nName=default\nIsRelative=0\nPath=' + defaultPathToDefaultProfile + '\nDefault=1');
 	let promiseIni = OS.File.writeAtomic(pathProfilesIni, iniBufferArray,
 		{
