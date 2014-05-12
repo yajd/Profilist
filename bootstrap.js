@@ -394,7 +394,7 @@ function deleteProfile(refreshIni, profName) {
 //end check if profile in use	 
 	if (refreshIni == 1) {
 		var promise = readIni();
-		promise.then(
+		return promise.then(
 			function() {
 				return deleteProfile(2, profName);
 			},
@@ -403,7 +403,6 @@ function deleteProfile(refreshIni, profName) {
 				return new Error(aRejectReason.message);
 			}
 		);
-		return promise;
 	} else {
 		//check if profile is in use and get the PathRootDir and PathLocalDir
 		 if (ini[profName].props.IsRelative == '1') {
@@ -435,23 +434,23 @@ function deleteProfile(refreshIni, profName) {
 			}
 		 }
 		 if (aDirect !== null) {
-		 try {
-			 var locker = myServices.tps.lockProfilePath(aDirect,aTemp);
-			 //if it gets to this line then the profile was not in use as it was succesfully locked
-			 locker.unlock(); //its not in use so lets unlock the profile
-			 console.log('continue as profile is not in use');
-		 } catch (ex) {
-			if (ex.result == Components.results.NS_ERROR_FILE_ACCESS_DENIED) {
-				console.warn('PROFILE IS IN USE');
-				//Services.prompt.alert(null, self.name + ' - ' + 'EXCEPTION', 'The profile "' + profName + '" is currently in use, cannot delete.');
-				return Promise.reject(new Error('The profile, "' + profName + '", is currently in use.'));
-			} else {
-				//throw ex;
-				console.log('ex happend = ', ex);
-				console.log('ex.result = ', ex.result);
-				return Promise.reject(new Error('Could not delete beacuse an error occured during profile use test.\nMessage: ' + ex.message));
-			}
-		 }
+			 try {
+				 var locker = myServices.tps.lockProfilePath(aDirect,aTemp);
+				 //if it gets to this line then the profile was not in use as it was succesfully locked
+				 locker.unlock(); //its not in use so lets unlock the profile
+				 console.log('continue as profile is not in use');
+			 } catch (ex) {
+				if (ex.result == Components.results.NS_ERROR_FILE_ACCESS_DENIED) {
+					console.warn('PROFILE IS IN USE');
+					//Services.prompt.alert(null, self.name + ' - ' + 'EXCEPTION', 'The profile "' + profName + '" is currently in use, cannot delete.');
+					return Promise.reject(new Error('The profile, "' + profName + '", is currently in use.'));
+				} else {
+					//throw ex;
+					console.log('ex happend = ', ex);
+					console.log('ex.result = ', ex.result);
+					return Promise.reject(new Error('Could not delete beacuse an error occured during profile use test.\nMessage: ' + ex.message));
+				}
+			 }
 		 } else {
 		 	console.warn('aDirect doesnt exist so assuming profile is not in use, its gotta be impossible to be in use if aDirect doesnt exist')
 		 }
