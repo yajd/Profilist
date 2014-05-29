@@ -1598,7 +1598,7 @@ var windowListener = {
 			return;
 		}
 		
-		if (win7_taskbar_behavior == false) {
+		if (win7_taskbar_behavior) {
 			myServices.wt.setGroupIdForWindow(aDOMWindow, myServices.wt.defaultGroupId);
 		}
 		
