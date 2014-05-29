@@ -1439,10 +1439,15 @@ var windowListener = {
 			return;
 		}
 		if (win7_taskbar_behavior === undefined) {
-			win7_taskbar_behavior = myServices.wt.available;
+			if (myServices.wt.available) {
+				win7_taskbar_behavior = OS.Path.basename(OS.Constants.Path.profileDir);
+			} else {
+				win7_taskbar_behavior = false;
+			}
 		}
 		if (win7_taskbar_behavior) {
-			myServices.wt.setGroupIdForWindow(aDOMWindow, myServices.wt.defaultGroupId + '-' + profToolkit.selectedProfile.name);
+			console.error('setting group id to', myServices.wt.defaultGroupId + '-' + win7_taskbar_behavior)
+			myServices.wt.setGroupIdForWindow(aDOMWindow, myServices.wt.defaultGroupId + '-' + win7_taskbar_behavior);
 		}
 		var PanelUI = aDOMWindow.document.querySelector('#PanelUI-popup');
 		if (PanelUI) {			
