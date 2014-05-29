@@ -686,7 +686,7 @@ function updateOnPanelShowing(e, aDOMWindow, dontUpdateIni) {
 function updateProfToolkit(refreshIni, refreshStack, iDOMWindow) {
 	if (refreshIni == 1) {
 		var promise = readIni();
-		promise.then(
+		return promise.then(
 			function() {
 				updateProfToolkit(0, refreshStack);
 			},
@@ -695,7 +695,6 @@ function updateProfToolkit(refreshIni, refreshStack, iDOMWindow) {
 				return new Error(aRejectReason.message);
 			}
 		);
-		return promise;
 	} else {
 		if (profToolkit.rootPathDefault === 0) {
 			console.log('initing prof toolkit');
@@ -1391,6 +1390,7 @@ function customizationending(e) {
 	active.removeAttribute('disabled');
 }
 
+var updateWin7Windows = undefined;
 /*start - windowlistener*/
 var registered = false;
 var windowListener = {
@@ -1439,15 +1439,51 @@ var windowListener = {
 			return;
 		}
 		if (win7_taskbar_behavior === undefined) {
-			if (myServices.wt.available) {
-				win7_taskbar_behavior = OS.Path.basename(OS.Constants.Path.profileDir);
+			if (updateWin7Windows === undefined) {
+				if (myServices.wt.available) {
+					if (profToolkit.selectedProfile.name === 0) {
+						updateWin7Windows = [aDOMWindow];
+						var promise00 = updateProfToolkit(1, 0);
+						promise00.then(
+						function() {
+							console.log('for win7 updateProfToolkit promise00 success')
+							if ('Default' in ini[profToolkit.selectedProfile.name].props && ini[profToolkit.selectedProfile.name].props.Default ==1) {
+								win7_taskbar_behavior = myServices.wt.defaultGroupId;
+							} else {
+								win7_taskbar_behavior = myServices.wt.defaultGroupId + '-' + profToolkit.selectedProfile.rootDirName;
+							}
+							for (var i=0; i<updateWin7Windows.length; i++) {
+								myServices.wt.setGroupIdForWindow(updateWin7Windows[i], win7_taskbar_behavior);
+							}
+							updateWin7Windows = null;
+						},
+						function() {
+							console.error('failed updating prof toolkit');
+						})
+					} else {
+						if ('Default' in ini[profToolkit.selectedProfile.name].props && ini[profToolkit.selectedProfile.name].props.Default ==1) {
+							win7_taskbar_behavior = myServices.wt.defaultGroupId;
+						} else {
+							win7_taskbar_behavior = myServices.wt.defaultGroupId + '-' + profToolkit.selectedProfile.rootDirName;
+						}
+						myServices.wt.setGroupIdForWindow(aDOMWindow,  win7_taskbar_behavior);
+					}
+				} else {
+					win7_taskbar_behavior = false;
+				}
+			} else if (updateWin7Windows.length && updateWin7Windows.length > 0) {
+				console.log('promise00 is running so lets just push this aDOMWindow');
+				updateWin7Windows.push(aDOMWindow);
 			} else {
-				win7_taskbar_behavior = false;
+				//updateWin7Windows should be null
+				console.log('updateWin7Windows should be null', updateWin7Windows);
+				myServices.wt.setGroupIdForWindow(aDOMWindow,  win7_taskbar_behavior);
 			}
-		}
-		if (win7_taskbar_behavior) {
+		} else if (win7_taskbar_behavior) {
 			console.error('setting group id to', myServices.wt.defaultGroupId + '-' + win7_taskbar_behavior)
-			myServices.wt.setGroupIdForWindow(aDOMWindow, myServices.wt.defaultGroupId + '-' + win7_taskbar_behavior);
+			myServices.wt.setGroupIdForWindow(aDOMWindow,  win7_taskbar_behavior);
+		} else {
+			console.log('win7_taskbar_behavior is false so dont set window group id');
 		}
 		var PanelUI = aDOMWindow.document.querySelector('#PanelUI-popup');
 		if (PanelUI) {			
