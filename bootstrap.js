@@ -14,6 +14,8 @@ var unloaders = {};
 var PUIsync_height;
 var PUIsync;
 
+var win7_taskbar_behavior = undefined;
+
 const { TextEncoder, TextDecoder } = Cu.import("resource://gre/modules/commonjs/toolkit/loader.js", {});
 Cu.import('resource://gre/modules/Services.jsm');
 Cu.import('resource://gre/modules/devtools/Console.jsm');
@@ -24,6 +26,7 @@ Cu.import('resource://gre/modules/Promise.jsm');
 XPCOMUtils.defineLazyGetter(myServices, 'sss', function(){ return Cc['@mozilla.org/content/style-sheet-service;1'].getService(Ci.nsIStyleSheetService) });
 XPCOMUtils.defineLazyGetter(myServices, 'tps', function(){ return Cc['@mozilla.org/toolkit/profile-service;1'].createInstance(Ci.nsIToolkitProfileService) });
 XPCOMUtils.defineLazyGetter(myServices, 'as', function () { return Cc["@mozilla.org/alerts-service;1"].getService(Ci.nsIAlertsService) });
+XPCOMUtils.defineLazyGetter(myServices, 'wt', function () { return Cc["@mozilla.org/windows-taskbar;1"].getService(Ci.nsIWinTaskbar) });
 
 var pathProfilesIni = OS.Path.join(OS.Constants.Path.userApplicationDataDir, 'profiles.ini');
 var ini = {};
@@ -1435,7 +1438,12 @@ var windowListener = {
 		if (!aDOMWindow) {
 			return;
 		}
-		
+		if (win7_taskbar_behavior === undefined) {
+			win7_taskbar_behavior = myServices.wt.available;
+		}
+		if (win7_taskbar_behavior) {
+			myServices.wt.setGroupIdForWindow(aDOMWindow, myServices.wt.defaultGroupId + '-' + profToolkit.selectedProfile.name);
+		}
 		var PanelUI = aDOMWindow.document.querySelector('#PanelUI-popup');
 		if (PanelUI) {			
 			//var PUIsync = PanelUI.querySelector('#PanelUI-fxa-status');
@@ -1588,6 +1596,10 @@ var windowListener = {
 	unloadFromWindow: function (aDOMWindow) {
 		if (!aDOMWindow) {
 			return;
+		}
+		
+		if (win7_taskbar_behavior == false) {
+			myServices.wt.setGroupIdForWindow(aDOMWindow, myServices.wt.defaultGroupId);
 		}
 		
 		var PanelUI = aDOMWindow.document.querySelector('#PanelUI-popup');
