@@ -12,6 +12,18 @@
   -moz-binding: url(toolbarbutton.xml#toolbarbutton);
 }
 
+.PanelUI-profilist .toolbarbutton-badge {
+  list-style-image: url(chrome://browser/skin/places/query.png);
+  transform: translate(8px,8px) scale(0.7);
+  border: 1px solid red;
+  opacity: 0;
+  transition: opacity .5s;
+}
+
+.PanelUI-profilist .toolbarbutton-badge:hover {
+  opacity: 1;
+}
+
 .PanelUI-profilist {
   border-top: 1px solid hsla(210,4%,10%,.14);
   border-bottom: 1px solid transparent;
