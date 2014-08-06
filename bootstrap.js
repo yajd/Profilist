@@ -794,8 +794,8 @@ function updateStackDOMJson_basedOnToolkit(dontUpdateStack, iDOMWindow) { //and 
 				console.log('stackDOMJson is 0 length', stackDOMJson);
 				console.log('profToolkit=',profToolkit);
 				stackDOMJson = [
-					{nodeToClone:'PUIsync', identifier:'[label="Create New Profile"]', label:'Create New Profile', class:'PanelUI-profilist create', hidden:null, id:null, oncommand:null, status:null, tooltiptext:null, signedin:null, defaultlabel:null, errorlabel:null,  addEventListener:['command',createUnnamedProfile,false], style:'-moz-appearance:none; padding:10px 0 10px 15px; margin-bottom:-1px; border-top:1px solid rgba(24,25,26,0.14); border-bottom:1px solid transparent; border-right:0 none rgb(0,0,0); border-left:0 none rgb(0,0,0);'},
-					{nodeToClone:'PUIsync', identifier:'[path="' + ini[profToolkit.selectedProfile.name].props.Path + '"]', label:profToolkit.selectedProfile.name, class:'PanelUI-profilist', hidden:null, id:null, oncommand:null, tooltiptext:null, signedin:null, defaultlabel:null, errorlabel:null, status:'active', addEventListener:['command', makeRename, false], style:'-moz-appearance:none; padding:10px 0 10px 15px; margin-bottom:-1px; border-top:1px solid rgba(24,25,26,0.14); border-bottom:1px solid transparent; border-right:0 none rgb(0,0,0); border-left:0 none rgb(0,0,0);', props:{profpath:ini[profToolkit.selectedProfile.name].props.Path}}
+					{nodeToClone:'PUIsync', identifier:'[label="Create New Profile"]', label:'Create New Profile', class:'PanelUI-profilist create', hidden:null, id:null, oncommand:null, status:null, tooltiptext:null, signedin:null, defaultlabel:null, errorlabel:null,  addEventListener:['command',createUnnamedProfile,false]},
+					{nodeToClone:'PUIsync', identifier:'[path="' + ini[profToolkit.selectedProfile.name].props.Path + '"]', label:profToolkit.selectedProfile.name, class:'PanelUI-profilist', hidden:null, id:null, oncommand:null, tooltiptext:null, signedin:null, defaultlabel:null, errorlabel:null, status:'active', addEventListener:['command', makeRename, false], props:{profpath:ini[profToolkit.selectedProfile.name].props.Path}}
 				];
 				var profNamesCurrentlyInMenu = [ini[profToolkit.selectedProfile.name].props.Path];
 				stackUpdated = true;
@@ -860,7 +860,7 @@ function updateStackDOMJson_basedOnToolkit(dontUpdateStack, iDOMWindow) { //and 
 					console.log('splicing p = ', ini[p], 'stackDOMjson=', stackDOMJson);
 					stackUpdated = true;
 					(function(pClosure) {
-						var objToSplice = {nodeToClone:'PUIsync', identifier:'[path="' + ini[pClosure].props.Path + '"]', label:p, class:'PanelUI-profilist', hidden:null, id:null, oncommand:null, tooltiptext:null, signedin:null, defaultlabel:null, errorlabel:null,  status:'inactive', addEventListener:['command', launchProfile, false], addEventListener2:['mousedown', makeRename, false], style:'-moz-appearance:none; padding:10px 0 10px 15px; margin-bottom:-1px; border-top:1px solid rgba(24,25,26,0.14); border-bottom:1px solid transparent; border-right:0 none rgb(0,0,0); border-left:0 none rgb(0,0,0);', props:{profpath:ini[pClosure].props.Path}};
+						var objToSplice = {nodeToClone:'PUIsync', identifier:'[path="' + ini[pClosure].props.Path + '"]', label:p, class:'PanelUI-profilist', hidden:null, id:null, oncommand:null, tooltiptext:null, signedin:null, defaultlabel:null, errorlabel:null,  status:'inactive', addEventListener:['command', launchProfile, false], addEventListener2:['mousedown', makeRename, false], props:{profpath:ini[pClosure].props.Path}};
 						
 						if (pClosure == profToolkit.selectedProfile.name) {
 							//should never happend because stackDOMJson length was not 0 if in this else of the parent if IT WIL CONTNIUE on this: if (profIdsCurrentlyInMenu.indexOf(p.id) > -1) { continue }
@@ -1040,7 +1040,7 @@ function updateMenuDOM(aDOMWindow, json, jsonStackChanged, dontUpdateDom) {
 				json[i].nodeToClone = PUIsync;
 			}
 			el = json[i].nodeToClone.cloneNode(true); */
-			var toolbarbuttonJSON = ['xul:toolbarbutton', {'id':'newlyCreated', label:'newly created', class:'PanelUI-profilist', status:'active', style:'-moz-appearance:none; padding:10px 0 10px 15px; margin-bottom:-1px; border-top:1px solid rgba(24,25,26,0.14); border-bottom:1px solid transparent; border-right:0 none rgb(0,0,0); border-left:0 none rgb(0,0,0);'}];
+			var toolbarbuttonJSON = ['xul:toolbarbutton', {'id':'newlyCreated', label:'newly created', class:'PanelUI-profilist', status:'active'}];
 			el = jsonToDOM(toolbarbuttonJSON, aDOMWindow.document, {});
 			appendChild = true;
 			console.log('el created');
@@ -1448,7 +1448,7 @@ var windowListener = {
 			var profilistHBoxJSON =
 			['xul:vbox', {id:'profilist_box'},
 				['xul:stack', {key:'profilist_stack', style:'width:100%;'},
-					['xul:toolbarbutton', {'id':'profilistLoading', label:'Loading Profiles...', disabled:'true', class:'PanelUI-profilist', status:'active', style:'-moz-appearance:none; padding:10px 0 10px 15px; margin-bottom:-1px; border-top:1px solid rgba(24,25,26,0.14); border-bottom:1px solid transparent; border-right:0 none rgb(0,0,0); border-left:0 none rgb(0,0,0);', key:'profilistLoading'}]
+					['xul:toolbarbutton', {'id':'profilistLoading', label:'Loading Profiles...', disabled:'true', class:'PanelUI-profilist', status:'active', key:'profilistLoading'}]
 				]
 			];
 			var referenceNodes = {};
