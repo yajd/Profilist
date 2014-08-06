@@ -9,6 +9,7 @@
   border-radius: 0;
   transition: background-color;
   -moz-box-orient: horizontal;
+  -moz-binding: url(toolbarbutton.xml#toolbarbutton);
 }
 
 .PanelUI-profilist {
