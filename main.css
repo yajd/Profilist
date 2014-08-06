@@ -1,3 +1,14 @@
+.profilist_box > stack > toolbarbutton {
+  /*inline to here*/
+	-moz-appearance:none;
+	padding:10px 0 10px 15px !important;
+	margin-bottom:-1px;
+	border-top:1px solid rgba(24,25,26,0.14);
+	border-bottom:1px solid transparent;
+	border-right:0 none rgb(0,0,0);
+	border-left:0 none rgb(0,0,0);	
+}
+
 .PanelUI-profilist {
   margin: 0;
   padding: 10px 0;
@@ -10,14 +21,6 @@
   transition: background-color;
   -moz-box-orient: horizontal;
   /*-moz-binding: url(toolbarbutton.xml#toolbarbutton);*/
-  /*inline to here*/
-	-moz-appearance:none;
-	padding:10px 0 10px 15px;
-	margin-bottom:-1px;
-	border-top:1px solid rgba(24,25,26,0.14);
-	border-bottom:1px solid transparent;
-	border-right:0 none rgb(0,0,0);
-	border-left:0 none rgb(0,0,0);
 }
 
 .PanelUI-profilist .toolbarbutton-badge {
