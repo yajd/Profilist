@@ -111,7 +111,7 @@
 }
 
 
-#profilist_box stack {
+#profilist_box > stack {
 	transition: height 0.25s;
 	min-height: 2em;
 	overflow: hidden;
