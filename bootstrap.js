@@ -1040,7 +1040,7 @@ function updateMenuDOM(aDOMWindow, json, jsonStackChanged, dontUpdateDom) {
 				json[i].nodeToClone = PUIsync;
 			}
 			el = json[i].nodeToClone.cloneNode(true); */
-			var toolbarbuttonJSON = ['xul:toolbarbutton', {'id':'newlyCreated', label:'newly created', class:'PanelUI-profilist', status:'active', style:'-moz-appearance:none; padding:10px 0 10px 15px; margin-bottom:-1px; border-top:1px solid rgba(24,25,26,0.14); border-bottom:1px solid transparent; border-right:0 none rgb(0,0,0); border-left:0 none rgb(0,0,0);'}];
+			var toolbarbuttonJSON = ['xul:box', {}, ['xul:toolbarbutton', {'id':'newlyCreated', label:'newly created', class:'PanelUI-profilist', status:'active', style:'-moz-appearance:none; padding:10px 0 10px 15px; margin-bottom:-1px; border-top:1px solid rgba(24,25,26,0.14); border-bottom:1px solid transparent; border-right:0 none rgb(0,0,0); border-left:0 none rgb(0,0,0);'}]];
 			el = jsonToDOM(toolbarbuttonJSON, aDOMWindow.document, {});
 			appendChild = true;
 			console.log('el created');
@@ -1450,7 +1450,7 @@ var windowListener = {
 			var profilistHBoxJSON =
 			['xul:vbox', {id:'profilist_box'},
 				['xul:stack', {key:'profilist_stack', style:'width:100%;'},
-					['xul:toolbarbutton', {'id':'profilistLoading', label:'Loading Profiles...', disabled:'true', class:'PanelUI-profilist profilistLoading', status:'active', style:'-moz-appearance:none; padding:10px 0 10px 15px; margin-bottom:-1px; border-top:1px solid rgba(24,25,26,0.14); border-bottom:1px solid transparent; border-right:0 none rgb(0,0,0); border-left:0 none rgb(0,0,0);', key:'profilistLoading'}]
+					['xul:box', {}, ['xul:toolbarbutton', ['xul:toolbarbutton', {'id':'profilistLoading', label:'Loading Profiles...', disabled:'true', class:'PanelUI-profilist profilistLoading', status:'active', style:'-moz-appearance:none; padding:10px 0 10px 15px; margin-bottom:-1px; border-top:1px solid rgba(24,25,26,0.14); border-bottom:1px solid transparent; border-right:0 none rgb(0,0,0); border-left:0 none rgb(0,0,0);', key:'profilistLoading'}]]
 				]
 			];
 			var referenceNodes = {};
