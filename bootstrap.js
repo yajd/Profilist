@@ -4,6 +4,7 @@ const self = {
 	chrome_path: 'chrome://profilist/content/',
 	aData: 0,
 };
+//working menu revamp
 
 const myServices = {};
 var cssUri;
