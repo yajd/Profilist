@@ -23,14 +23,20 @@
 
       <xul:label class="toolbarbutton-text" crop="right" flex="1" xbl:inherits="value=label,accesskey,crop,wrap"/>
       <xul:label class="toolbarbutton-multiline-text" flex="1" xbl:inherits="xbl:text=label,accesskey,wrap"/>
-	  <xul:box class="profilist-submenu">
+    </content>
+  </binding>
+  <binding id="profilist-tbb-box">
+    <content>
+      <children includes="observes|template|menupopup|panel|tooltip"/>
+      <xul:label class="toolbarbutton-multiline-text" flex="1" xbl:inherits="xbl:text=label,accesskey,wrap"/>
+	<xul:box class="profilist-submenu">
 		<xul:image class="profilist-closed"/>
 		<xul:image class="profilist-build"/>
 		<xul:image class="profilist-safe"/>
 		<xul:image class="profilist-default"/>
 		<xul:image class="profilist-rename"/>
 		<xul:image class="profilist-del"/>
-	  </xul:box>
+	</xul:box>
     </content>
   </binding>
 </bindings>
