@@ -87,6 +87,7 @@ installPath.path: C:\Users\Vayeate\AppData\Roaming\Mozilla\Firefox\Profiles\j0a1
 
 .cancel:before {
 	content: '\e800';
+	font-size: 17px !important; /* so it matches the updown arrow and location icons, even tho they are at 16 they are 17 sized */
 }
 
 .builds-cont > div:not(:first-of-type) > span:nth-of-type(1).noswitch span.change-icon:before {
@@ -298,7 +299,7 @@ padding: 0px;
 }
 
 .hd {
-background: url('options_resources/eum_box_top.png') no-repeat scroll left top transparent;
+background: url('eum_box_top.png') no-repeat scroll left top transparent;
 height: 10px;
 width: 486px;
 margin: 0px;
@@ -306,7 +307,7 @@ padding: 0px;
 }
 
 #login-dialog-inner {
-background: url('options_resources/eum_box_slice.png') repeat-y scroll left top transparent;
+background: url('eum_box_slice.png') repeat-y scroll left top transparent;
 width: 486px;
 float: left;
 padding: 0px 5px;
@@ -379,7 +380,7 @@ border: 1px solid #abadb3;
 }
 
 .ft {
-background: url('options_resources/eum_box_btm.png') no-repeat scroll left top transparent;
+background: url('eum_box_btm.png') no-repeat scroll left top transparent;
 color: #FFF;
 font-size: 0.93em;
 float: left;
