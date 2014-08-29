@@ -2212,7 +2212,7 @@ PrefListener.prototype.register = function(aReason, exec__on_PrefOnObj_Change__o
 					try {
 						prefObj.value = branchObj._branchLive['get' + typeStr_from_typeLong(prefObj.type) + 'Pref'](pref_name_on_obj);
 					} catch(ex) {
-						console.warn('excpetion occured when trying to fetch value, startup is not install so it should exist, however it probably doesnt so weird, so setting it to default, ex:', ex); //this may happen if prefs were deleted somehow even though not uninstalled
+						console.warn('excpetion occured when trying to fetch value, startup is not install so it should exist, however it probably doesnt so weird, so setting it to default, CAN GET HERE IF say have v1.2 installed and prefs were introduced in v1.3, so on update it can get here. ex:', ex); //this may happen if prefs were deleted somehow even though not uninstalled
 						prefObj.value = prefObj.default;
 					}
 				}
