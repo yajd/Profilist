@@ -2400,7 +2400,8 @@ function writePrefToIni(oldVal, newVal, refObj) {
 					);
 				}
 				console.info('POST info', 'value_in_ini:', value_in_ini, 'newVal:', newVal, 'uneval(ini.General.props)', uneval(ini.General.props))
-				updateOptionTabsDOM(refObj.pref_name, newVal);
+				//updateOptionTabsDOM(refObj.pref_name, newVal);
+				cpCommPostMsg(['pref-to-dom', refObj.pref_name, newVal].join(subDataSplitter));
 				
 				console.info('destiny info', 'value_in_ini:', value_in_ini, 'newVal:', newVal, 'uneval(ini.General.props)', uneval(ini.General.props))
 			};
@@ -2706,22 +2707,28 @@ function cpClientListener(aSubject, aTopic, aData) {
 				}
 			);
 			break;
-		case 'update-ini-with-selected-pref-value':
+		case 'update-pref-so-ini-too-with-user-setting':
 			var pref_name = subDataArr[0];
-			var pref_val = subDataArr[1];
+			var user_set_val = subDataArr[1];
 			if (!(pref_name in myPrefListener.watchBranches[myPrefBranch].prefNames)) {
 				throw new Error('pref_name of ' + pref_name + ' not found in myPrefListener watchedBranches');
 				return;
 			}
-			if (myPrefListener.watchBranches[myPrefBranch].prefNames[pref_name].type == Ci.nsIPrefBranch.PREF_BOOL) {
-				if (pref_val === 'true') {
-					pref_val = true;
-				} else if (pref_val === 'false') {
-					pref_val = false;
+			var prefObj = myPrefListener.watchBranches[myPrefBranch].prefNames[pref_name];
+			if (prefObj.type == Ci.nsIPrefBranch.PREF_BOOL) {
+				if (typeof(user_set_val) != 'boolean') {
+				  if (user_set_val == 'false') {
+					user_set_val = false;
+				  } else if (user_set_val == 'true') {
+					user_set_val = true;
+				  } else {
+					throw new Error('not a boolean');
+				  }
 				}
 			}
-			myPrefListener.watchBranches[myPrefBranch].prefNames[pref_name].setval(pref_val);
-			ini.General.props['Profilist.' + pref_name] = pref_val;
+			prefObj.setval(user_set_val);
+			/* removed this write to ini and to ini file on 082914 104p because doing setval will trigger this it its onChange. the onChange also handles broadacasting to all cp clients to update dom to that value, and thats important (ie: if multiple clients open)
+			ini.General.props['Profilist.' + pref_name] = user_set_val;
 			var promise = writeIni();
 			promise.then(
 				function() {
@@ -2729,9 +2736,10 @@ function cpClientListener(aSubject, aTopic, aData) {
 					cpCommPostMsg(['pref-to-dom', pref_name, pref_val].join(subDataSplitter));
 				},
 				function(aRejectReason) {
-					throw new Error('Failed to write ini on update-ini-with-selected-pref-value for reason: ' + aRejectReason);
+					throw new Error('Failed to write ini on update-pref-so-ini-too-with-user-setting for reason: ' + aRejectReason);
 				}
 			);
+			*/
 			break;
 		default:
 			throw new Error('"profilist-cp-server": aTopic of "' + aTopic + '" is unrecognized');

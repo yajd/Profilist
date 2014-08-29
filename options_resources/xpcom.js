@@ -263,7 +263,7 @@ var observers = {
 	}
 	
 	//this contians some communication stuff
-	 function updatePrefFromSelectChange(e) {
+	 function updatePrefAndIni_to_UserSetting(e) {
 		var targ = e.target;
 		var selectedText = targ[targ.selectedIndex].text;
 		var selectedValue = targ[targ.selectedIndex].value;
@@ -285,7 +285,7 @@ var observers = {
 			});
 		} else {
 			//Services.obs.notifyObservers(null, 'profilist-cp-client', ['update-ini-with-selected-pref-value', pref_name, selectedValue].join(subDataSplitter));
-			cpCommPostMsg(['update-ini-with-selected-pref-value', pref_name, selectedValue].join(subDataSplitter));
+			cpCommPostMsg(['update-pref-so-ini-too-with-user-setting', pref_name, selectedValue].join(subDataSplitter));
 		}
 	 }
 	 //end - this contains some communication stuff
