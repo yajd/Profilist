@@ -1,11 +1,7 @@
 .profilist-display-stack-box {
-	margin-right: 15px;
+	margin-right: 3px;
 }
-.profilist-display-stack {
-	margin: 0;
-	padding: 0;
-}
-.profilist-display-stack * {
+.profilist-display-stack-box * {
 	margin: 0;
 	padding: 0;
 	border: 0;
