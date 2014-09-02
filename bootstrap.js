@@ -1837,7 +1837,8 @@ var windowListener = {
 		
 		aDOMWindow.addEventListener('activate', activated, false);
 		var PanelUI = aDOMWindow.document.querySelector('#PanelUI-popup');
-		if (PanelUI) {			
+		if (PanelUI) {
+			aDOMWindow.QueryInterface(Ci.nsIInterfaceRequestor).getInterface(Ci.nsIDOMWindowUtils).loadSheet(cssUri, 2); //0 == agent_sheet 1 == user_sheet 2 == author_sheet
 			//var PUIsync = PanelUI.querySelector('#PanelUI-fxa-status');
 //			//console.info('PUIsync on start up = ', PUIsync);
 
@@ -2009,6 +2010,7 @@ var windowListener = {
 			if (profilistHBox) {
 				profilistHBox.parentNode.removeChild(profilistHBox);
 			}
+			aDOMWindow.QueryInterface(Ci.nsIInterfaceRequestor).getInterface(Ci.nsIDOMWindowUtils).removeSheet(cssUri, 2);
 		}
 	}
 };
@@ -2828,7 +2830,7 @@ function startup(aData, aReason) {
 		aBaseURI: null
 	}
 	cssUri = Services.io.newURI(newURIParam.aURL, newURIParam.aOriginCharset, newURIParam.aBaseURI);
-	myServices.sss.loadAndRegisterSheet(cssUri, myServices.sss.AUTHOR_SHEET);
+	//myServices.sss.loadAndRegisterSheet(cssUri, myServices.sss.AUTHOR_SHEET);
 	
 	//start pref stuff more
 	myPrefListener = new PrefListener(); //init
@@ -2850,7 +2852,7 @@ function startup(aData, aReason) {
 function shutdown(aData, aReason) {
 	if (aReason == APP_SHUTDOWN) return;
 		
-	myServices.sss.unregisterSheet(cssUri, myServices.sss.AUTHOR_SHEET);
+	//myServices.sss.unregisterSheet(cssUri, myServices.sss.AUTHOR_SHEET);
 	
 	windowListener.unregister();
 	
