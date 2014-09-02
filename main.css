@@ -1,8 +1,10 @@
+.profilist-display-stack-box {
+	margin-right: 15px;
+}
 .profilist-display-stack {
 	margin: 0;
 	padding: 0;
-	margin-right: 25px;
-	display: -moz-stack !important;
+	width: 100%;
 }
 .profilist-display-stack * {
 	margin: 0;
@@ -14,6 +16,7 @@
 	font-size: inherit;
 	font-family: inherit;
 	outline: 1px solid hsla(210,4%,10%,.12);
+	padding-right: 3px;
 }
 
 #profilist_box > stack {
