@@ -33,7 +33,7 @@
 -moz-box-align: center;
 -moz-box-pack: center;
 transition-property: background-color;
-
+position:relative;
 max-width: 0;
 }
 .profilist-tbb-box:hover {
