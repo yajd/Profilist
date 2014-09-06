@@ -49,7 +49,6 @@ max-width: 0;
 	border:0;
 	display:flex;
 	/*-moz-binding: url('chrome://profilist/content/xbl.xml#tbb');*/
-	height: 36px;
 	
 	box-sizing: border-box;
 	flex-basis: 0%;
