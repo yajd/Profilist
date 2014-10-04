@@ -1,5 +1,5 @@
 var EXPORTED_SYMBOLS = ['ostypes'];
-Cu.import('resource://gre/modules/ctypes.jsm');
+//Cu.import('resource://gre/modules/ctypes.jsm');
 
 if (ctypes.voidptr_t.size == 4 /* 32-bit */) {
 	var is64bit = false;
