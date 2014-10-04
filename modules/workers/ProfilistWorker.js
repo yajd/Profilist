@@ -729,10 +729,22 @@ function focusMostRecentWinOfProfile(IsRelative, Path, rootPathDefault) {
 			var i = 0;
 			var buf;
 			var PID = new ostypes.DWORD;
-			var styleIsInAltTab = ostypes.WS_VISIBLE | ostypes.WS_CAPTION;
+			var styleIsInAltTab = ostypes.WS_VISIBLE | ostypes.WS_CAPTION; //visible OR caption //how to do visible AND caption?
+			var dumpThis = [];
+			
+			//debug stuff
+			var WINSTYLE_NAME_TO_HEX = {'WS_BORDER':0x00800000,'WS_CAPTION':0x00C00000,'WS_CHILD':0x40000000,'WS_CHILDWINDOW':0x40000000,'WS_CLIPCHILDREN':0x02000000,'WS_CLIPSIBLINGS':0x04000000,'WS_DISABLED':0x08000000,'WS_DLGFRAME':0x00400000,'WS_GROUP':0x00020000,'WS_HSCROLL':0x00100000,'WS_ICONIC':0x20000000,'WS_MAXIMIZE':0x01000000,'WS_MAXIMIZEBOX':0x00010000,'WS_MINIMIZE':0x20000000,'WS_MINIMIZEBOX':0x00020000,'WS_OVERLAPPED':0x00000000,'WS_POPUP':0x80000000,'WS_SIZEBOX':0x00040000,'WS_SYSMENU':0x00080000,'WS_TABSTOP':0x00010000,'WS_THICKFRAME':0x00040000,'WS_TILED':0x00000000,'WS_VISIBLE':0x10000000,'WS_VSCROLL':0x00200000};
+
+			WINSTYLE_NAME_TO_HEX['WINSTYLE_NAME_TO_HEX'] = WINSTYLE_NAME_TO_HEX.WS_OVERLAPPED | WINSTYLE_NAME_TO_HEX.WS_CAPTION | WINSTYLE_NAME_TO_HEX.WS_SYSMENU | WINSTYLE_NAME_TO_HEX.WS_THICKFRAME | WINSTYLE_NAME_TO_HEX.WS_MINIMIZEBOX | WINSTYLE_NAME_TO_HEX.WS_MAXIMIZEBOX;
+			WINSTYLE_NAME_TO_HEX['WS_POPUPWINDOW'] = WINSTYLE_NAME_TO_HEX.WS_POPUP | WINSTYLE_NAME_TO_HEX.WS_BORDER | WINSTYLE_NAME_TO_HEX.WS_SYSMENU;
+			WINSTYLE_NAME_TO_HEX['WS_TILEDWINDOW'] = WINSTYLE_NAME_TO_HEX.WS_OVERLAPPED | WINSTYLE_NAME_TO_HEX.WS_CAPTION | WINSTYLE_NAME_TO_HEX.WS_SYSMENU | WINSTYLE_NAME_TO_HEX.WS_THICKFRAME | WINSTYLE_NAME_TO_HEX.WS_MINIMIZEBOX | WINSTYLE_NAME_TO_HEX.WS_MAXIMIZEBOX;
+
+			var WINSTYLE_HEX_TO_NAME = {'0x00800000':'WS_BORDER','0x00C00000':'WS_CAPTION','0x40000000':'WS_CHILD','0x40000000':'WS_CHILDWINDOW','0x02000000':'WS_CLIPCHILDREN','0x04000000':'WS_CLIPSIBLINGS','0x08000000':'WS_DISABLED','0x00400000':'WS_DLGFRAME','0x00020000':'WS_GROUP','0x00100000':'WS_HSCROLL','0x20000000':'WS_ICONIC','0x01000000':'WS_MAXIMIZE','0x00010000':'WS_MAXIMIZEBOX','0x20000000':'WS_MINIMIZE','0x00020000':'WS_MINIMIZEBOX','0x00000000':'WS_OVERLAPPED','(WS_OVERLAPPED | WS_CAPTION | WS_SYSMENU | WS_THICKFRAME | WS_MINIMIZEBOX | WS_MAXIMIZEBOX':'WS_OVERLAPPEDWINDOW','0x80000000':'WS_POPUP','(WS_POPUP | WS_BORDER | WS_SYSMENU':'WS_POPUPWINDOW','0x00040000':'WS_SIZEBOX','0x00080000':'WS_SYSMENU','0x00010000':'WS_TABSTOP','0x00040000':'WS_THICKFRAME','0x00000000':'WS_TILED','(WS_OVERLAPPED | WS_CAPTION | WS_SYSMENU | WS_THICKFRAME | WS_MINIMIZEBOX | WS_MAXIMIZEBOX':'WS_TILEDWINDOW','0x10000000':'WS_VISIBLE','0x00200000':'WS_VSCROLL'}
+			var WINSTYLE_HEX_TO_DEC = {'0x00800000':8388608,'0x00C00000':12582912,'0x40000000':1073741824,'0x40000000':1073741824,'0x02000000':33554432,'0x04000000':67108864,'0x08000000':134217728,'0x00400000':4194304,'0x00020000':131072,'0x00100000':1048576,'0x20000000':536870912,'0x01000000':16777216,'0x00010000':65536,'0x20000000':536870912,'0x00020000':131072,'0x00000000':0,'0x80000000':2147483648,'0x00040000':262144,'0x00080000':524288,'0x00010000':65536,'0x00040000':262144,'0x00000000':0,'0x10000000':268435456,'0x00200000':2097152}
+			//end debug stuff
 			
 			while (hwndC != ostypes.NULL) {
-			  //console.log('i:', i);  
+			  //console.log('i:', i);
 			  hwndC = D.GetWindow(hwndC, ostypes.GW_HWNDNEXT);
 
 			  var rez_GWTPI = D.GetWindowThreadProcessId(hwndC, PID.address());
@@ -741,18 +753,35 @@ function focusMostRecentWinOfProfile(IsRelative, Path, rootPathDefault) {
 				//console.log('pid found:', PID.value);
 				hwndStyle = D.GetWindowLong(hwndC, ostypes.GWL_STYLE);
 				//console.log('hwndStyle', hwndStyle.toString());
-				if (hwndStyle & ostypes.WS_VISIBLE) {
+				var str = [];
+				for (var S in WINSTYLE_NAME_TO_HEX) {
+					if (hwndStyle & WINSTYLE_NAME_TO_HEX[S]) {
+						str.push(S);
+					}
+				}
+				if (str.length > 0) {
+					str = ' winstyles: ' + str.join(' | ');
+				} else {
+					str = '';
+				}
+				dumpThis.push('found hwnd of pid, hwnd:"' + hwndC.toString() + '" hwndStyle:"' + hwndStyle + '"' + str);
+				if ((hwndStyle & ostypes.WS_VISIBLE) && (hwndStyle & ostypes.WS_CAPTION)) {
+				//var rawrrr = undefined;
+				//if (rawrrr) {
 				   var rez_WFW = winFocusWindow(hwndC);
 				   //console.log('rez_WFW:', rez_WFW);
 				  if (!rez_WFW) {
 					throw new Error('failed to focus most recent window');
 				  }
+				  OS.File.writeAtomic(OS.Path.join(OS.Constants.Path.desktopDir, 'worker_dump.txt'), 'yay focused it, the pid of window was: ' + pid + ' and handle of window was: ' + hwndC.toString() + '\n\ndumpReport' + dumpThis.join('\n'), {encoding:'utf-8'});
+				  return 'yay focused it, the pid of window was: ' + pid + ' and handle of window was: ' + hwndC.toString();
 				  break;
 				}
 			  }
 			  i++;
 			  if (i >= 3000) {
 				//console.warn('breaking because went through too many windows, i:', i);
+				OS.File.writeAtomic(OS.Path.join(OS.Constants.Path.desktopDir, 'worker_dump.txt'), 'could not find most recent window of pid: ' + pid + '\n\ndumpReport' + dumpThis.join('\n'), {encoding:'utf-8'});
 				throw new Error('could not find most recent window of this pid')
 				break;
 			  }
@@ -767,26 +796,11 @@ function focusMostRecentWinOfProfile(IsRelative, Path, rootPathDefault) {
 		case 'sunos':
 		case 'webos': // Palm Pre
 		case 'android': //profilist doesnt support android (i dont think android has profiles, im not sure) but i include here anyways as its linux
-			//start - try to open libc
-			if (!('libX11' in lib)) {
-				var libsToTry = ['libX11.so.6', 'libX11.so.7', 'libX11.so.61.0', 'libX11.so'];
-				for (var i=0; i<libsToTry.length; i++) {
-					try {
-						ctypes.open(libsToTry);
-						break; //only gets here if succesfully opens
-					} catch(ex) {
-						if (ex.message == 'couldn\'t open library ' + libsToTry[i]) {
-							//its ok keep going
-							if (i == libsToTry.length - 1)  {
-								throw new Error('None of the libraries to try could be opened, OS is: "' + OS.Constants.Sys.Name + '"');
-							}
-						} else {
-							throw ex;
-						}
-					}
-				}
+			//start - try to open libX11
+			if (!lib.libX11) {
+				lib.libX11 = returnFirstLibThatOpens(['libX11.so.6', 'libX11.so.7', 'libX11.so.61.0', 'libX11.so']);
 			}
-			//end - try to open libc
+			//end - try to open libX11
 			
 			
 			var pid = rez_QPL;
