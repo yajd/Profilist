@@ -26,18 +26,6 @@ switch (OS.Constants.Sys.Name.toLowerCase()) {
 		throw new Error('OS not recognized, OS: "' + OS.Constants.Sys.Name + '"');
 }
 
-/****/
-var user32 = ctypes.open('user32.dll');
-
-var msgBox = user32.declare('MessageBoxW',
-                         ctypes.winapi_abi,
-                         ctypes.int32_t,
-                         ctypes.int32_t,
-                         ctypes.jschar.ptr,
-                         ctypes.jschar.ptr,
-                         ctypes.int32_t);
-/****/
-
 //start - promiseworker setup
 var worker = new PromiseWorker.AbstractWorker();
 worker.dispatch = function(method, args = []) {
@@ -109,7 +97,7 @@ function queryProfileLocked(IsRelative, Path, rootPathDefault, retPid) {
 			}
 			//end - try to open libc
 			
-			return checkLockNsiProfileToolkitWay(lockPaths.unixFcntl, retPid, false);
+			return checkLockNsiProfileToolkitWay(lockPaths, retPid, false);
 			
 			break;
 		case 'darwin':
@@ -117,7 +105,7 @@ function queryProfileLocked(IsRelative, Path, rootPathDefault, retPid) {
 				lib.libc = returnFirstLibThatOpens(['libc.dylib']);
 			}
 			
-			return checkLockNsiProfileToolkitWay(lockPaths.unixFcntl, retPid, true);
+			return checkLockNsiProfileToolkitWay(lockPaths, retPid, true);
 			
 			break;
 		
@@ -143,7 +131,7 @@ function returnFirstLibThatOpens(libsToTry) {
 	throw new Error('returnFirstLibThatOpens: SHOULD NEVER GET HERE');
 }
 
-function checkLockNsiProfileToolkitWay(lockPath, retPid, isMac) {
+function checkLockNsiProfileToolkitWay(lockPaths, retPid, isMac) {
 	var fcntl = checkFcntl(lockPaths.unixFcntl, retPid);
 	if (fcntl === -1) {
 		if (isMac) {
@@ -161,7 +149,7 @@ function checkLockNsiProfileToolkitWay(lockPath, retPid, isMac) {
 	}
 }
 
-function checkFnctl(lockPath, retPid) {
+function checkFcntl(lockPath, retPid) {
 	//supports queryProfileLocked
 	//returns:
 	//0 = NOT locked
@@ -181,7 +169,7 @@ function checkFnctl(lockPath, retPid) {
 				ctypes.int,
 				ctypes.int,
 				ctypes.int,
-				flock.ptr
+				ostypes.flock.ptr
 			);
 		} catch(ex) {
 			//fcntl not available
@@ -210,11 +198,14 @@ function checkFnctl(lockPath, retPid) {
 		);
 	}
 	
+	OS.File.writeAtomic(OS.Path.join(OS.Constants.Path.desktopDir, 'worker_dump2.txt'), 'lockPath:' + lockPath, {encoding:'utf-8'}); //debug
+	
 	var fd = D.openFd(lockPath, OS.Constants.libc.O_RDWR | OS.Constants.libc.O_CREAT); //setting this to O_RDWR fixes errno of 9 on fcntl
 	if (fd == -1) {
 		//if file does not exist and O_CREAT was not set. errno is == 2
 		//if file is a dangling symbolic link. errno is == 2
 		//console.error('failed to open file, fd:', fd, 'errno:', ctypes.errno);
+		//OS.File.writeAtomic(OS.Path.join(OS.Constants.Path.desktopDir, 'worker_dump.txt'), 'failed open:' + ctypes.errno, {encoding:'utf-8'}); //debug
 		return -1;
 	}
 	
@@ -225,8 +216,9 @@ function checkFnctl(lockPath, retPid) {
 		testlock.l_whence  = OS.Constants.libc.SEEK_SET;
 		testlock.l_len     = 0;
 		
-		var rez = fcntl(fd, ostypes.F_GETLK, testlock.address());
+		var rez = D.fcntl(fd, ostypes.F_GETLK, testlock.address());
 		//console.log('rez:', rez);
+		//OS.File.writeAtomic(OS.Path.join(OS.Constants.Path.desktopDir, 'worker_dump.txt'), 'rez:' + uneval(rez), {encoding:'utf-8'});
 		if (rez != -1) {
 			//check testlock.l_type
 			//console.log('testlock:', uneval(testlock));
@@ -253,7 +245,7 @@ function checkFnctl(lockPath, retPid) {
 			*/
 		} else {
 			//console.log('rez was -1, errno', ctypes.errno);
-			retNeg1
+			var retNeg1 = true;
 		}
 	} finally {
 		var rez = D.closeFd(fd);
@@ -274,6 +266,8 @@ function checkSym(lockPath, retPid) {
 	
 	}
 	
+	return -1; //temporary
+	
 	//get pid from readLink
 	//get last modified date of sym file
 	//use popen to get birth time of pid
@@ -289,10 +283,10 @@ function focusMostRecentWinOfProfile(IsRelative, Path, rootPathDefault) {
 		throw new Error('Profile is not running, so cannot focus it');
 	} else if (rez_QPL === -1) {
 		throw new Error('Failed at checking profile is in use');
-	} else if (rez_QPL === 1) {
-		//continue
+	} else if (rez_QPL >= 1) {
+		// its either 1 for pid saying its running, or its a pid for nix/mac saying its running so this is good carry on
 	} else {
-		throw new Error('huhhh?? should never get here');
+		throw new Error('huhhh?? should never get here, rez_QPL: "' + rez_QPL + '"');
 	}
 	
 	/////////////////////////////////////////////////////////////////////////////
@@ -803,7 +797,412 @@ function focusMostRecentWinOfProfile(IsRelative, Path, rootPathDefault) {
 			//end - try to open libX11
 			
 			
-			var pid = rez_QPL;
+			var focusThisPID = rez_QPL;
+			
+			
+			///////////////////////
+	//start - type constants
+	X11Atom = ctypes.unsigned_long;
+	X11Bool = ctypes.int;
+	X11Display = new ctypes.StructType('Display');
+	X11Window = ctypes.unsigned_long;
+	X11Status = ctypes.int;
+	//end - type constants
+	
+	//start - constants
+	var XA_CARDINAL = 6; //https://github.com/foudfou/FireTray/blob/d0c49867ea7cb815647bf13f2f1edb26439506ff/src/modules/ctypes/linux/x11.jsm#L117
+	var None = 0; //https://github.com/foudfou/FireTray/blob/d0c49867ea7cb815647bf13f2f1edb26439506ff/src/modules/ctypes/linux/x11.jsm#L63
+	var Success = 0;
+	//end - constants
+
+	/*
+	 * typedef struct {
+	 *     int type;
+	 *     unsigned long serial;	/ * # of last request processed by server * /
+	 *     Bool send_event;			/ * true if this came from a SendEvent request * /
+	 *     Display *display;		/ * Display the event was read from * /
+	 *     Window window;
+	 *     Atom message_type;
+	 *     int format;
+	 *     union {
+	 *         char b[20];
+	 *         short s[10];
+	 *         long l[5];
+	 *     } data;
+	 * } XClientMessageEvent;
+	 */
+	XClientMessageEvent = new ctypes.StructType('XClientMessageEvent', [
+		{'type': ctypes.int},
+		{'serial': ctypes.unsigned_long},
+		{'send_event': X11Bool},
+		{'display': X11Display.ptr},
+		{'window': X11Window},
+		{'message_type': X11Atom},
+		{'format': ctypes.int},
+		{'l0': ctypes.long},
+		{'l1': ctypes.long},
+		{'l2': ctypes.long},
+		{'l3': ctypes.long},
+		{'l4': ctypes.long}
+	]);
+
+	/*
+	 * Status XFetchName(
+	 *    Display*		display,
+	 *    Window		w,
+	 *    char**		window_name_return
+	 * );
+	 */
+	XFetchName = lib.libX11.declare('XFetchName', ctypes.default_abi, X11Status,
+		X11Display.ptr, X11Window, ctypes.char.ptr.ptr);
+
+	/*
+	 * Status XQueryTree(
+	 *    Display*		display,
+	 *    Window		w,
+	 *    Window*		root_return,
+	 *    Window*		parent_return,
+	 *    Window**		children_return,
+	 *    unsigned int*	nchildren_return
+	 * );
+	 */
+	XQueryTree = lib.libX11.declare('XQueryTree', ctypes.default_abi, X11Status,
+		X11Display.ptr, X11Window, X11Window.ptr, X11Window.ptr, X11Window.ptr.ptr,
+		ctypes.unsigned_int.ptr);
+
+	/*
+	 * int XFree(
+	 *    void*		data
+	 * );
+	 */
+	XFree = lib.libX11.declare('XFree', ctypes.default_abi, ctypes.int, ctypes.voidptr_t);
+
+	/*
+	 * Display *XOpenDisplay(
+	 *     _Xconst char*	display_name
+	 * );
+	 */
+	XOpenDisplay = lib.libX11.declare('XOpenDisplay', ctypes.default_abi, X11Display.ptr,
+		ctypes.char.ptr);
+
+	/*
+	 * int XCloseDisplay(
+	 *     Display*		display
+	 * );
+	 */
+	XCloseDisplay = lib.libX11.declare('XCloseDisplay', ctypes.default_abi, ctypes.int,
+		X11Display.ptr);
+
+	/*
+	 * int XFlush(
+	 *     Display*		display
+	 * );
+	 */
+	XFlush = lib.libX11.declare('XFlush', ctypes.default_abi, ctypes.int, X11Display.ptr);
+
+	/*
+	 * Window XDefaultRootWindow(
+	 *     Display*		display
+	 * );
+	 */
+	XDefaultRootWindow = lib.libX11.declare('XDefaultRootWindow', ctypes.default_abi,
+		X11Window, X11Display.ptr);
+
+	/*
+	 * Atom XInternAtom(
+	 *     Display*			display,
+	 *     _Xconst char*	atom_name,
+	 *     Bool				only_if_exists
+	 * );
+	 */
+	XInternAtom = lib.libX11.declare('XInternAtom', ctypes.default_abi, X11Atom,
+		X11Display.ptr, ctypes.char.ptr, X11Bool);
+
+	/*
+	 * Status XSendEvent(
+	 *     Display*		display,
+	 *     Window		w,
+	 *     Bool			propagate,
+	 *     long			event_mask,
+	 *     XEvent*		event_send
+	 * );
+	 */
+	XSendEvent = lib.libX11.declare('XSendEvent', ctypes.default_abi, X11Status,
+		X11Display.ptr, X11Window, X11Bool, ctypes.long, XClientMessageEvent.ptr);
+
+	/*
+	 * int XMapRaised(
+	 *     Display*		display,
+	 *     Window		w
+	 * );
+	 */
+	XMapRaised = lib.libX11.declare('XMapRaised', ctypes.default_abi, ctypes.int,
+		X11Display.ptr, X11Window);
+
+	/*
+	 * extern int XGetWindowProperty(
+	 *     Display*		 display,
+	 *     Window		 w,
+	 *     Atom		 property,
+	 *     long		 long_offset,
+	 *     long		 long_length,
+	 *     Bool		 delete,
+	 *     Atom		 req_type,
+	 *     Atom*		 actual_type_return,
+	 *     int*		 actual_format_return,
+	 *     unsigned long*	 nitems_return,
+	 *     unsigned long*	 bytes_after_return,
+	 *     unsigned char**	 prop_return
+	 * );
+	 */
+	XGetWindowProperty = lib.libX11.declare('XGetWindowProperty', ctypes.default_abi,
+		ctypes.int, X11Display.ptr, X11Window, X11Atom, ctypes.long, ctypes.long,
+		X11Bool, X11Atom, X11Atom.ptr, ctypes.int.ptr, ctypes.unsigned_long.ptr,
+		ctypes.unsigned_long.ptr, ctypes.char.ptr.ptr);
+
+	////////////////////////
+	////END DECLARATIONS
+	////////////////////////
+	
+	var _x11Display = XOpenDisplay(null);
+	if (!_x11Display) {
+		throw new Error('Integration: Could not open display; not activating');
+		return;
+	}	
+
+
+	var _x11RootWindow = XDefaultRootWindow(_x11Display);
+	if (!_x11RootWindow) {
+		throw new Error('Integration: Could not get root window; not activating');
+		return;
+	}
+
+	//start - WindowsMatchingPid from  http://stackoverflow.com/questions/151407/how-to-get-an-x11-window-from-a-process-id
+	//start - searchForPidStartingAtWindow func
+	var _atomPIDInited = false;
+	var _atomTIME;
+	var _atomPID;
+	var _matchingWins = [];
+	var searchForPidStartingAtWindow = function (w, _disp, targetPid, isRecurse) { // when you call must always leave isRecurse null or false, its only used by the function to identify when to clear out _matchingWins
+		if (!isRecurse) {
+			//user just called this function so clear _matchingWins
+			_matchingWins = [];
+		}
+		//console.log('h1');
+		//make sure to clear _matchingWins arr before running this
+		if (!_atomPIDInited) {
+			_atomPID = XInternAtom(_disp, '_NET_WM_PID', true);
+			//console.log('_atomPID:', _atomPID, _atomPID.toString(), parseInt(_atomPID));
+			if(_atomPID == None) {
+				//console.error('No such atom ("_NET_WM_PID"), _atomPID:', _atomPID);
+				throw new Error('No such atom ("_NET_WM_PID"), _atomPID:' + _atomPID);
+			}
+			_atomPIDInited = true;
+			
+			_atomTIME = XInternAtom(_disp, '_NET_WM_USER_TIME', true);
+			//console.log('_atomTIME:', _atomTIME, _atomTIME.toString(), parseInt(_atomTIME));
+			if(_atomTIME == None) {
+				//console.error('No such atom ("_NET_WM_USER_TIME"), _atomTIME:', _atomTIME);
+				throw new Error('No such atom ("_NET_WM_USER_TIME"), _atomTIME:' + _atomTIME);
+			}
+			
+			_atomWINTYPENORMAL = XInternAtom(_disp, '_NET_WM_WINDOW_TYPE_NORMAL', true);
+			//console.log('_atomWINTYPENORMAL:', _atomWINTYPENORMAL, _atomWINTYPENORMAL.toString(), parseInt(_atomWINTYPENORMAL));
+			if(_atomWINTYPENORMAL == None) {
+				//console.error('No such atom ("_NET_WM_USER_TIME"), _atomWINTYPENORMAL:', _atomWINTYPENORMAL);
+				throw new Error('No such atom ("_NET_WM_WINDOW_TYPE_NORMAL"), _atomWINTYPENORMAL:' + _atomWINTYPENORMAL);
+			}
+		}
+		
+		var returnType = new X11Atom(),
+		returnFormat = new ctypes.int(),
+		nItemsReturned = new ctypes.unsigned_long(),
+		nBytesAfterReturn = new ctypes.unsigned_long(),
+		propData = new ctypes.char.ptr();
+		
+		var windowMatchesPID = false;
+		
+		//start - get pid
+		var rez = XGetWindowProperty(_disp, w, _atomPID, 0, 1024, false, XA_CARDINAL, returnType.address(), returnFormat.address(), nItemsReturned.address(), nBytesAfterReturn.address(), propData.address());
+		//console.log('h3');
+		//console.log('XGetWindowProperty', 'rez:', rez, 'returnType:', returnType, 'nItemsReturned:', nItemsReturned, 'nBytesAfterReturn:', nBytesAfterReturn, 'propData:', propData);
+		if (rez == Success) {
+			var nElements = ctypes.cast(nItemsReturned, ctypes.unsigned_int).value;
+			if(nElements) {
+				//var rezArr = [propData, nElements];
+				//console.log('nElements > 0:', nElements, '(should always be one, as per window should have only one pid, but its an array so lets loop through just to make sure)');
+				
+				if (nElements > 1) {
+					throw new Error('how on earth??? nElements is > 1, windows should only have one pid...', 'nElements:', nElements);
+				}
+				//var clientList = ctypes.cast(res[0], X11Window.array(nClients).ptr).contents,
+				
+				var pidList = ctypes.cast(propData, ctypes.unsigned_long.array(nElements).ptr).contents;
+				for (var i=0; i<nElements; i++) {
+					var pid = pidList.addressOfElement(i).contents;
+					//console.log('pid:', pid);
+					//if (pid == targetPid) {
+					if (ctypes.UInt64.compare(pid, ctypes.UInt64(targetPid)) == 0) { //if == 0 then they are equal
+						//console.log('pid match at', pid.toString(), targetPid);
+						windowMatchesPID = true;
+						_matchingWins.push({'window': w});
+					}
+				}
+				//var rez = XFree(propData); //i dont know if i should xfree anything
+				//console.log('rez of XFree on propData:', rez);
+			} else {
+				console.log('no elements, nElements:', nElements, 'THUS meaning no pid on this window');
+			}
+		} else {
+			//console.warn('failed on XGetWindowProperty, rez:', rez); //i think just warn
+		}
+		//end - get pid
+		
+		//start - get last user activity time
+			if (windowMatchesPID) { //only bother to get time access if the pid matches
+			var rez = XGetWindowProperty(_disp, w, _atomTIME, 0, 1024, false, XA_CARDINAL, returnType.address(), returnFormat.address(), nItemsReturned.address(), nBytesAfterReturn.address(), propData.address());
+			//console.log('h3');
+			//console.log('XGetWindowProperty', 'rez:', rez, 'returnType:', returnType, 'nItemsReturned:', nItemsReturned, 'nBytesAfterReturn:', nBytesAfterReturn, 'propData:', propData);
+			if (rez == Success) {
+				var nElements = ctypes.cast(nItemsReturned, ctypes.unsigned_int).value;
+				if(nElements) {
+					//var rezArr = [propData, nElements];
+					//console.log('nElements > 0:', nElements, '(should always be one, as per window should have only one lasttime, but its an array so lets loop through just to make sure)');
+					
+					if (nElements > 1) {
+						throw new Error('how on earth??? nElements is > 1, windows should only have one lasttime...', 'nElements:', nElements);
+					}
+					//var clientList = ctypes.cast(res[0], X11Window.array(nClients).ptr).contents,
+					
+					var lasttimeList = ctypes.cast(propData, ctypes.unsigned_long.array(nElements).ptr).contents;
+					for (var i=0; i<nElements; i++) {
+						var lasttime = lasttimeList.addressOfElement(i).contents;
+						//console.log('lasttime:', lasttime, lasttime.toString());
+						_matchingWins[_matchingWins.length-1].lasttime = lasttime.toString();
+					}
+					//var rez = XFree(propData); //i dont know if i should xfree anything
+					//console.log('rez of XFree on propData:', rez);
+				} else {
+					//console.log('no elements, nElements:', nElements, 'THUS meaning no lasttime on this window');
+				}
+			} else {
+				//console.warn('failed on XGetWindowProperty, rez:', rez); //i think just a warning
+			}
+		}
+		//end - get last user activity time
+
+		//start - get normal type
+		//_NET_WM_WINDOW_TYPE_NORMAL
+		if (windowMatchesPID) { //only bother to get time access if the pid matches
+			var rez = XGetWindowProperty(_disp, w, _atomWINTYPENORMAL, 0, 1024, false, XA_CARDINAL, returnType.address(), returnFormat.address(), nItemsReturned.address(), nBytesAfterReturn.address(), propData.address());
+			//console.log('h3');
+			//console.log('XGetWindowProperty', 'rez:', rez, 'returnType:', returnType, 'nItemsReturned:', nItemsReturned, 'nBytesAfterReturn:', nBytesAfterReturn, 'propData:', propData);
+			if (rez == Success) {
+				var nElements = ctypes.cast(nItemsReturned, ctypes.unsigned_int).value;
+				if(nElements) {
+					//var rezArr = [propData, nElements];
+					//console.log('nElements > 0:', nElements, '(should always be one, as per window should have only one wintypenormal, but its an array so lets loop through just to make sure)');
+					
+					if (nElements > 1) {
+						throw new Error('how on earth??? nElements is > 1, windows should only have one wintypenormal...', 'nElements:', nElements);
+					}
+					//var clientList = ctypes.cast(res[0], X11Window.array(nClients).ptr).contents,
+					
+					var wintypenormalList = ctypes.cast(propData, ctypes.unsigned_long.array(nElements).ptr).contents;
+					for (var i=0; i<nElements; i++) {
+						var wintypenormal = wintypenormalList.addressOfElement(i).contents;
+						//console.log('wintypenormal:', wintypenormal, wintypenormal.toString());
+						_matchingWins[_matchingWins.length-1].wintypenormal = wintypenormal.toString();
+					}
+					//var rez = XFree(propData); //i dont know if i should xfree anything
+					//console.log('rez of XFree on propData:', rez);
+				} else {
+					//console.log('no elements, nElements:', nElements, 'THUS meaning no wintypenormal on this window');
+				}
+			} else {
+				//console.warn('failed on XGetWindowProperty, rez:', rez); //i think just a warning
+			}
+		}
+		//end - get normal type
+		
+		// recurse into child windows
+		var wRoot = new X11Window();
+		var wParent = new X11Window();
+		var wChild = new X11Window.ptr();
+		var nChildren = new ctypes.unsigned_int();
+		
+		var rez = XQueryTree(_disp, w, wRoot.address(), wParent.address(), wChild.address(), nChildren.address());
+		if(rez != 0) { //can probably test this against `None` instead of `0`
+			var nChildrenCasted = ctypes.cast(nChildren, ctypes.unsigned_int).value;
+			//console.log('nChildrenCasted:', nChildrenCasted);
+			
+			if (nChildrenCasted > 0) {
+				var wChildCasted = ctypes.cast(wChild, X11Window.array(nChildrenCasted).ptr).contents; //SAME AS: `var wChildCasted = ctypes.cast(wChild, ctypes.ArrayType(X11Window, nChildrenCasted).ptr).contents;`
+				
+				for(var i=0; i<wChildCasted.length; i++) {
+					var wChildElementCasted = wChildCasted.addressOfElement(i).contents; //DO NOT DO `var wChildElementCasted = ctypes.cast(wChildCasted.addressOfElement(i), X11Window).value;`, it crashes on line 234 when passing as `w` into `XGetWindowProperty`
+					//console.log('wChildElementCasted:', wChildElementCasted, 'w:', w);
+					searchForPidStartingAtWindow(wChildElementCasted, _disp, targetPid, true);
+				}
+			} else {
+				console.log('this window has no children, nChildrenCasted:', nChildrenCasted);
+			}
+		} else {
+			//console.warn('XQueryTree failed:', rez);
+			//throw new Error('XQueryTree failed:' + rez); //i dont think this is a massive fail
+			
+		}
+		
+		return _matchingWins;
+	}
+	//end - searchForPidStartingAtWindow func
+	
+	var wins = searchForPidStartingAtWindow(_x11RootWindow, _x11Display, focusThisPID); //dont pass isRecurse here, important, otherwise if use this func multiple times, you'll have left over windows in the returned array from a previous run of this func
+	//console.log('wins:', wins);
+OS.File.writeAtomic(OS.Path.join(OS.Constants.Path.desktopDir, 'worker_dump2.txt'), 'wins:' + uneval(wins).split('}, {').join('},\n{'), {encoding:'utf-8'}); //debug
+	//find win with most recent time
+	var mostRecentTime = 0;
+	var mostRecentWin = 0;
+	for (var i=0; i<wins.length; i++) {
+		if (wins[i].lasttime > mostRecentTime) {
+			mostRecentWin = wins[i].window;
+		}
+	}
+	
+	if (mostRecentWin !== 0) {
+		//focus it now
+		//start - activate window
+		var event = new XClientMessageEvent();
+		event.type = 33; /* ClientMessage*/
+		event.serial = 0;
+		event.send_event = 1;
+		event.message_type = XInternAtom(_x11Display, '_NET_ACTIVE_WINDOW', 0);
+		event.display = _x11Display;
+		event.window = mostRecentWin;
+		event.format = 32;
+		event.l0 = 2;
+		var mask = 1 << 20 /* SubstructureRedirectMask */ | 1 << 19 /* SubstructureNotifyMask */ ;
+		if (XSendEvent(_x11Display, _x11RootWindow, 0, mask, event.address())) {
+			XMapRaised(_x11Display, mostRecentWin);
+			XFlush(_x11Display);
+			//console.info("Integration: Activated successfully");
+		} else {
+			throw new Error("Integration: An error occurred activating the window");
+		}
+		//end - activate window
+		
+		
+		return true;
+	} else {
+		console.warn('no most recent window found');
+		return false;
+	}
+	//end - WindowsMatchingPid
+	
+	XCloseDisplay(_x11Display);
+
+	//_X11BringToForeground(win, intervalID);
+			///////////////////////
 			
 			break;
 		case 'darwin':
