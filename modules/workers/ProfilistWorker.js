@@ -1159,33 +1159,38 @@ function focusMostRecentWinOfProfile(IsRelative, Path, rootPathDefault) {
 	
 	var wins = searchForPidStartingAtWindow(_x11RootWindow, _x11Display, focusThisPID); //dont pass isRecurse here, important, otherwise if use this func multiple times, you'll have left over windows in the returned array from a previous run of this func
 	//console.log('wins:', wins);
-OS.File.writeAtomic(OS.Path.join(OS.Constants.Path.desktopDir, 'worker_dump2.txt'), 'wins:' + uneval(wins).split('}, {').join('},\n{'), {encoding:'utf-8'}); //debug
+
 	//find win with most recent time
 	var mostRecentTime = 0;
 	var mostRecentWin = 0;
+	var lastWinWithLastTime = -1;
 	for (var i=0; i<wins.length; i++) {
-		if (wins[i].lasttime > mostRecentTime) {
-			mostRecentWin = wins[i].window;
+		if (wins[i].lasttime) {
+			lastWinWithLastTime = i;
+			OS.File.writeAtomic(OS.Path.join(OS.Constants.Path.desktopDir, 'worker_dump3.txt'), 'found at i:' + i + ' it is:' + uneval(wins[i]), {encoding:'utf-8'}); //debug
+			break;
 		}
 	}
 	
-	if (mostRecentWin !== 0) {
+	if (lastWinWithLastTime !== -1) {
 		//focus it now
 		//start - activate window
+		OS.File.writeAtomic(OS.Path.join(OS.Constants.Path.desktopDir, 'worker_dump2.txt'), 'wins:' + uneval(wins).split('}, {').join('},\n{') + '\n\nwill focus this guy: ' + uneval(wins[lastWinWithLastTime]), {encoding:'utf-8'}); //debug
 		var event = new XClientMessageEvent();
 		event.type = 33; /* ClientMessage*/
 		event.serial = 0;
 		event.send_event = 1;
 		event.message_type = XInternAtom(_x11Display, '_NET_ACTIVE_WINDOW', 0);
 		event.display = _x11Display;
-		event.window = mostRecentWin;
+		event.window = wins[lastWinWithLastTime].window;
 		event.format = 32;
 		event.l0 = 2;
 		var mask = 1 << 20 /* SubstructureRedirectMask */ | 1 << 19 /* SubstructureNotifyMask */ ;
 		if (XSendEvent(_x11Display, _x11RootWindow, 0, mask, event.address())) {
-			XMapRaised(_x11Display, mostRecentWin);
+			XMapRaised(_x11Display, wins[lastWinWithLastTime].window);
 			XFlush(_x11Display);
 			//console.info("Integration: Activated successfully");
+			OS.File.writeAtomic(OS.Path.join(OS.Constants.Path.desktopDir, 'worker_dump.txt'), 'succesfully done', {encoding:'utf-8'}); //debug
 		} else {
 			throw new Error("Integration: An error occurred activating the window");
 		}
@@ -1194,7 +1199,8 @@ OS.File.writeAtomic(OS.Path.join(OS.Constants.Path.desktopDir, 'worker_dump2.txt
 		
 		return true;
 	} else {
-		console.warn('no most recent window found');
+		//console.warn('no most recent window found'); //just a warning, but its weird how is it running but no most recent window found, so lets throw this
+		throw new Error('no most recent window found');
 		return false;
 	}
 	//end - WindowsMatchingPid
