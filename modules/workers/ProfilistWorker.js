@@ -1164,11 +1164,25 @@ function focusMostRecentWinOfProfile(IsRelative, Path, rootPathDefault) {
 	var mostRecentTime = 0;
 	var mostRecentWin = 0;
 	var lastWinWithLastTime = -1;
+	var firstWin = -1; //first one with last time
+	var lastNoLastTimeAfterFirstWin;
+	var firstNoLastTimeAfterFirstWin;
 	for (var i=0; i<wins.length; i++) {
 		if (wins[i].lasttime) {
-			lastWinWithLastTime = i;
+			if (firstWin == -1) {
+				firstWin = i;
+				continue;
+			} else if (firstNoLastTimeAfterFirstWin !== -1) {
+				lastWinWithLastTime = i;
+				break;
+			}
 			OS.File.writeAtomic(OS.Path.join(OS.Constants.Path.desktopDir, 'worker_dump3.txt'), 'found at i:' + i + ' it is:' + uneval(wins[i]), {encoding:'utf-8'}); //debug
-			break;
+			//break;
+		} else {
+			if (firstWin != -1) {
+				firstNoLastTimeAfterFirstWin = i;
+				OS.File.writeAtomic(OS.Path.join(OS.Constants.Path.desktopDir, 'worker_dump3.txt'), 'found at i:' + i + ' it is:' + uneval(wins[i]), {encoding:'utf-8'}); //debug
+			}
 		}
 	}
 	
