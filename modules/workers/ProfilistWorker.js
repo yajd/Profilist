@@ -811,8 +811,8 @@ function focusMostRecentWinOfProfile(IsRelative, Path, rootPathDefault) {
 	
 	//start - constants
 	var XA_CARDINAL = 6; //https://github.com/foudfou/FireTray/blob/d0c49867ea7cb815647bf13f2f1edb26439506ff/src/modules/ctypes/linux/x11.jsm#L117
-	var None = 0; //https://github.com/foudfou/FireTray/blob/d0c49867ea7cb815647bf13f2f1edb26439506ff/src/modules/ctypes/linux/x11.jsm#L63
-	var Success = 0;
+	None = 0; //https://github.com/foudfou/FireTray/blob/d0c49867ea7cb815647bf13f2f1edb26439506ff/src/modules/ctypes/linux/x11.jsm#L63
+	Success = 0;
 	//end - constants
 
 	/*
@@ -980,8 +980,6 @@ function focusMostRecentWinOfProfile(IsRelative, Path, rootPathDefault) {
 	//start - WindowsMatchingPid from  http://stackoverflow.com/questions/151407/how-to-get-an-x11-window-from-a-process-id
 	//start - searchForPidStartingAtWindow func
 	var _atomPIDInited = false;
-	var _atomTIME;
-	var _atomPID;
 	var _matchingWins = [];
 	var searchForPidStartingAtWindow = function (w, _disp, targetPid, isRecurse) { // when you call must always leave isRecurse null or false, its only used by the function to identify when to clear out _matchingWins
 		if (!isRecurse) {
@@ -990,141 +988,62 @@ function focusMostRecentWinOfProfile(IsRelative, Path, rootPathDefault) {
 		}
 		//console.log('h1');
 		//make sure to clear _matchingWins arr before running this
+		/*
 		if (!_atomPIDInited) {
-			_atomPID = XInternAtom(_disp, '_NET_WM_PID', true);
-			//console.log('_atomPID:', _atomPID, _atomPID.toString(), parseInt(_atomPID));
-			if(_atomPID == None) {
-				//console.error('No such atom ("_NET_WM_PID"), _atomPID:', _atomPID);
-				throw new Error('No such atom ("_NET_WM_PID"), _atomPID:' + _atomPID);
-			}
+			var fetchAtomsForNames = ['_NET_WM_PID', '_NET_WM_USER_TIME', '_NET_WM_WINDOW_TYPE', '_NET_WM_WINDOW_TYPE_NORMAL'];
+			fetchAtomsForNames.forEach(function(atomName) {
+				if (!D[atomName]) {
+					D[atomName] = XInternAtom(_disp, atomName, true);
+					if(D[atomName] == None) {
+						//console.error('No such atom ("' + atomName + '"), D[atomName]:', D[atomName]);
+						throw new Error('No such atom ("' + atomName + '"), D[atomName]:' + D[atomName]);
+					}
+				}
+			});
 			_atomPIDInited = true;
-			
-			_atomTIME = XInternAtom(_disp, '_NET_WM_USER_TIME', true);
-			//console.log('_atomTIME:', _atomTIME, _atomTIME.toString(), parseInt(_atomTIME));
-			if(_atomTIME == None) {
-				//console.error('No such atom ("_NET_WM_USER_TIME"), _atomTIME:', _atomTIME);
-				throw new Error('No such atom ("_NET_WM_USER_TIME"), _atomTIME:' + _atomTIME);
-			}
-			
-			_atomWINTYPENORMAL = XInternAtom(_disp, '_NET_WM_WINDOW_TYPE_NORMAL', true);
-			//console.log('_atomWINTYPENORMAL:', _atomWINTYPENORMAL, _atomWINTYPENORMAL.toString(), parseInt(_atomWINTYPENORMAL));
-			if(_atomWINTYPENORMAL == None) {
-				//console.error('No such atom ("_NET_WM_USER_TIME"), _atomWINTYPENORMAL:', _atomWINTYPENORMAL);
-				throw new Error('No such atom ("_NET_WM_WINDOW_TYPE_NORMAL"), _atomWINTYPENORMAL:' + _atomWINTYPENORMAL);
-			}
 		}
+		*/
 		
-		var returnType = new X11Atom(),
-		returnFormat = new ctypes.int(),
-		nItemsReturned = new ctypes.unsigned_long(),
-		nBytesAfterReturn = new ctypes.unsigned_long(),
-		propData = new ctypes.char.ptr();
 		
 		var windowMatchesPID = false;
 		
 		//start - get pid
-		var rez = XGetWindowProperty(_disp, w, _atomPID, 0, 1024, false, XA_CARDINAL, returnType.address(), returnFormat.address(), nItemsReturned.address(), nBytesAfterReturn.address(), propData.address());
-		//console.log('h3');
-		//console.log('XGetWindowProperty', 'rez:', rez, 'returnType:', returnType, 'nItemsReturned:', nItemsReturned, 'nBytesAfterReturn:', nBytesAfterReturn, 'propData:', propData);
-		if (rez == Success) {
-			var nElements = ctypes.cast(nItemsReturned, ctypes.unsigned_int).value;
-			if(nElements) {
-				//var rezArr = [propData, nElements];
-				//console.log('nElements > 0:', nElements, '(should always be one, as per window should have only one pid, but its an array so lets loop through just to make sure)');
-				
-				if (nElements > 1) {
-					throw new Error('how on earth??? nElements is > 1, windows should only have one pid...', 'nElements:', nElements);
-				}
-				//var clientList = ctypes.cast(res[0], X11Window.array(nClients).ptr).contents,
-				
-				var pidList = ctypes.cast(propData, ctypes.unsigned_long.array(nElements).ptr).contents;
-				for (var i=0; i<nElements; i++) {
-					var pid = pidList.addressOfElement(i).contents;
-					//console.log('pid:', pid);
-					//if (pid == targetPid) {
-					if (ctypes.UInt64.compare(pid, ctypes.UInt64(targetPid)) == 0) { //if == 0 then they are equal
-						//console.log('pid match at', pid.toString(), targetPid);
-						windowMatchesPID = true;
-						_matchingWins.push({'window': w});
-					}
-				}
-				//var rez = XFree(propData); //i dont know if i should xfree anything
-				//console.log('rez of XFree on propData:', rez);
-			} else {
-				console.log('no elements, nElements:', nElements, 'THUS meaning no pid on this window');
-			}
+		var pid = xGetWinProp(_disp, w, '_NET_WM_PID', XA_CARDINAL, ctypes.unsigned_long, true);
+		if (pid == None) {
+			//console.warn('failed to get pid');
+			pid = null;
 		} else {
-			//console.warn('failed on XGetWindowProperty, rez:', rez); //i think just warn
-		}
-		//end - get pid
-		
-		//start - get last user activity time
-			if (windowMatchesPID) { //only bother to get time access if the pid matches
-			var rez = XGetWindowProperty(_disp, w, _atomTIME, 0, 1024, false, XA_CARDINAL, returnType.address(), returnFormat.address(), nItemsReturned.address(), nBytesAfterReturn.address(), propData.address());
-			//console.log('h3');
-			//console.log('XGetWindowProperty', 'rez:', rez, 'returnType:', returnType, 'nItemsReturned:', nItemsReturned, 'nBytesAfterReturn:', nBytesAfterReturn, 'propData:', propData);
-			if (rez == Success) {
-				var nElements = ctypes.cast(nItemsReturned, ctypes.unsigned_int).value;
-				if(nElements) {
-					//var rezArr = [propData, nElements];
-					//console.log('nElements > 0:', nElements, '(should always be one, as per window should have only one lasttime, but its an array so lets loop through just to make sure)');
-					
-					if (nElements > 1) {
-						throw new Error('how on earth??? nElements is > 1, windows should only have one lasttime...', 'nElements:', nElements);
-					}
-					//var clientList = ctypes.cast(res[0], X11Window.array(nClients).ptr).contents,
-					
-					var lasttimeList = ctypes.cast(propData, ctypes.unsigned_long.array(nElements).ptr).contents;
-					for (var i=0; i<nElements; i++) {
-						var lasttime = lasttimeList.addressOfElement(i).contents;
-						//console.log('lasttime:', lasttime, lasttime.toString());
-						_matchingWins[_matchingWins.length-1].lasttime = lasttime.toString();
-					}
-					//var rez = XFree(propData); //i dont know if i should xfree anything
-					//console.log('rez of XFree on propData:', rez);
-				} else {
-					//console.log('no elements, nElements:', nElements, 'THUS meaning no lasttime on this window');
-				}
-			} else {
-				//console.warn('failed on XGetWindowProperty, rez:', rez); //i think just a warning
+			debugOut.push('pid got:"' + pid + '"');
+			debugOutWRITE(true);
+			if (ctypes.UInt64.compare(pid, ctypes.UInt64(targetPid)) == 0) { //if == 0 then they are equal
+				//console.log('pid match at', pid.toString(), targetPid);
+				windowMatchesPID = true;
+				_matchingWins.push({'window': w});
 			}
 		}
-		//end - get last user activity time
-
-		//start - get normal type
-		//_NET_WM_WINDOW_TYPE_NORMAL
+		
+		//start - get extar stuff if pid is right
 		if (windowMatchesPID) { //only bother to get time access if the pid matches
-			var rez = XGetWindowProperty(_disp, w, _atomWINTYPENORMAL, 0, 1024, false, XA_CARDINAL, returnType.address(), returnFormat.address(), nItemsReturned.address(), nBytesAfterReturn.address(), propData.address());
-			//console.log('h3');
-			//console.log('XGetWindowProperty', 'rez:', rez, 'returnType:', returnType, 'nItemsReturned:', nItemsReturned, 'nBytesAfterReturn:', nBytesAfterReturn, 'propData:', propData);
-			if (rez == Success) {
-				var nElements = ctypes.cast(nItemsReturned, ctypes.unsigned_int).value;
-				if(nElements) {
-					//var rezArr = [propData, nElements];
-					//console.log('nElements > 0:', nElements, '(should always be one, as per window should have only one wintypenormal, but its an array so lets loop through just to make sure)');
-					
-					if (nElements > 1) {
-						throw new Error('how on earth??? nElements is > 1, windows should only have one wintypenormal...', 'nElements:', nElements);
-					}
-					//var clientList = ctypes.cast(res[0], X11Window.array(nClients).ptr).contents,
-					
-					var wintypenormalList = ctypes.cast(propData, ctypes.unsigned_long.array(nElements).ptr).contents;
-					for (var i=0; i<nElements; i++) {
-						var wintypenormal = wintypenormalList.addressOfElement(i).contents;
-						//console.log('wintypenormal:', wintypenormal, wintypenormal.toString());
-						_matchingWins[_matchingWins.length-1].wintypenormal = wintypenormal.toString();
-					}
-					//var rez = XFree(propData); //i dont know if i should xfree anything
-					//console.log('rez of XFree on propData:', rez);
-				} else {
-					//console.log('no elements, nElements:', nElements, 'THUS meaning no wintypenormal on this window');
-				}
+			var lasttime = xGetWinProp(_disp, w, '_NET_WM_USER_TIME', XA_CARDINAL, ctypes.unsigned_long, true);
+			if (lasttime == None) {
+				//no lasttime on this win
 			} else {
-				//console.warn('failed on XGetWindowProperty, rez:', rez); //i think just a warning
+				_matchingWins[_matchingWins.length-1].lasttime = lasttime.toString();
+			}
+			
+			var fetchProp = xGetWinProp(_disp, w, '_NET_WM_WINDOW_TYPE', 1, X11Atom, false);
+			if (fetchProp != None) {
+				_matchingWins[_matchingWins.length-1]._NET_WM_WINDOW_TYPE = fetchProp.toString();
+			}
+			
+			var fetchProp = xGetWinProp(_disp, w, '_NET_WM_ICON', XA_CARDINAL, ctypes.unsigned_long, false);
+			if (fetchProp != None) {
+				_matchingWins[_matchingWins.length-1]._NET_WM_ICON = fetchProp;
+				debugOut.push('icon on this window is:' + fetchProp);
 			}
 		}
-		//end - get normal type
-		
+		//end - get extar stuff if pid is right
+
 		// recurse into child windows
 		var wRoot = new X11Window();
 		var wParent = new X11Window();
@@ -1157,9 +1076,11 @@ function focusMostRecentWinOfProfile(IsRelative, Path, rootPathDefault) {
 	}
 	//end - searchForPidStartingAtWindow func
 	
+	debugOutCLEAR();
 	var wins = searchForPidStartingAtWindow(_x11RootWindow, _x11Display, focusThisPID); //dont pass isRecurse here, important, otherwise if use this func multiple times, you'll have left over windows in the returned array from a previous run of this func
 	//console.log('wins:', wins);
-
+	debugOutWRITE();
+	
 	//find win with most recent time
 	var mostRecentTime = 0;
 	var mostRecentWin = 0;
@@ -1194,7 +1115,7 @@ function focusMostRecentWinOfProfile(IsRelative, Path, rootPathDefault) {
 		event.type = 33; /* ClientMessage*/
 		event.serial = 0;
 		event.send_event = 1;
-		event.message_type = XInternAtom(_x11Display, '_NET_ACTIVE_WINDOW', 0);
+		event.message_type = XInternAtom(_x11Display, '_NET_ACTIVE_WINDOW', 0); //need this here so get right display
 		event.display = _x11Display;
 		event.window = wins[lastWinWithLastTime].window;
 		event.format = 32;
@@ -1237,4 +1158,93 @@ function focusMostRecentWinOfProfile(IsRelative, Path, rootPathDefault) {
 	}
 	/////////////////////////////////////////////////////////////////////////////
 	
+}
+
+var debugOut = [];
+
+function xGetWinProp(_DISP, tWin, tAtomName, tPropType, tPropDataCType, SINGLE) {
+//this func is meant for getting properties that have just single value, but can be easily just needs slight mod to make handle multi. mod needed is to make it not error out on finding nElements == 1 and return the array
+//tPropDataCType should be like `ctypes.unsigned_long`
+//tPropType = XA_CARDINAL
+//(win, propertyName, propertyType)
+	if (!D[tAtomName]) {
+		D[tAtomName] = XInternAtom(_DISP, tAtomName, true);
+		if(D[tAtomName] == None) {
+			//console.error('No such atom ("' + tAtomName + '"), D[tAtomName]:', D[tAtomName]);
+			throw new Error('No such atom ("' + tAtomName + '"), D[tAtomName]:' + D[tAtomName]);
+		}
+	}
+	var tAtom = D[tAtomName];
+	
+	
+		var returnType = new X11Atom(),
+		returnFormat = new ctypes.int(),
+		nItemsReturned = new ctypes.unsigned_long(),
+		nBytesAfterReturn = new ctypes.unsigned_long(),
+		propData = new ctypes.char.ptr();
+	
+	//tAtom is the actualy XInternAtom'ed atom
+	//x11 get window property
+		var rez_XGWP = XGetWindowProperty(_DISP, tWin, tAtom, 0, 1024, false, tPropType, returnType.address(), returnFormat.address(), nItemsReturned.address(), nBytesAfterReturn.address(), propData.address());
+		if (rez_XGWP == Success) {
+			var nElements = ctypes.cast(nItemsReturned, ctypes.unsigned_int).value;
+			debugOut.push('nElements:' + nElements);
+			if(nElements) {
+				//var rezArr = [propData, nElements];
+				//console.log('nElements > 0:', nElements, '(should always be one, as per window should have only one pid, but its an array so lets loop through just to make sure)');
+				
+				
+				if (SINGLE) {
+					if (nElements > 1) {
+						throw new Error('how on earth??? nElements is > 1, windows should only have one pid...', 'nElements:' + uneval(nElements));
+					}
+				}
+				//var clientList = ctypes.cast(res[0], X11Window.array(nClients).ptr).contents,
+				
+				var dataList = ctypes.cast(propData, tPropDataCType.array(nElements).ptr).contents;
+				if (SINGLE) {
+					var dat = dataList.addressOfElement(0).contents;
+				} else {
+					var retDatArr = [];
+					for (var i=0; i<nElements; i++) {
+						var dat = dataList.addressOfElement(i).contents;
+						retDatArr.push(dat);
+						//console.log('dat:', dat);
+					}
+				}
+				for (var i=0; i<nElements; i++) {
+					var dat = dataList.addressOfElement(i).contents;
+					//console.log('dat:', dat);
+				}
+				debugOut.push('dat pre xfree:' + dat);
+				var rezXF = XFree(propData); //i dont know if i should xfree anything // i think mamybe only xf after casting? maybe? or maybe if nElements > 0, for now going with nEl > 0
+				//console.log('rez of XFree on propData:', rezXF);
+				debugOut.push('rezXF on propData:' + rezXF + ' | propName:' + tAtomName);
+				if (SINGLE) {
+					debugOut.push('dat:' + dat);
+					return dat;
+				} else {
+					debugOut.push('retDatArr:' + retDatArr);
+					return retDatArr;
+				}
+			} else {
+				//console.log('no elements, nElements:', nElements, 'THUS meaning no pid on this window');
+				return None;
+			}
+		} else {
+			//console.warn('failed on XGetWindowProperty, rez:', rez); //i think just warn
+			return None;
+		}
+}
+
+function debugOutCLEAR() {
+	debugOut = [];
+}
+
+function debugOutWRITE(dontClear) {
+	var str = debugOut.join('\n');
+	OS.File.writeAtomic(OS.Path.join(OS.Constants.Path.desktopDir, 'debugOut.txt'), str, {encoding:'utf-8'});
+	if (!dontClear) {
+		debugOutCLEAR();
+	}
 }
