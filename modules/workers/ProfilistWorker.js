@@ -1013,8 +1013,8 @@ function focusMostRecentWinOfProfile(IsRelative, Path, rootPathDefault) {
 			//console.warn('failed to get pid');
 			pid = null;
 		} else {
-			debugOut.push('pid got:"' + pid + '"');
-			debugOutWRITE(true);
+			//debugOut.push('pid got:"' + pid + '"');
+			//debugOutWRITE(true);
 			if (ctypes.UInt64.compare(pid, ctypes.UInt64(targetPid)) == 0) { //if == 0 then they are equal
 				//console.log('pid match at', pid.toString(), targetPid);
 				windowMatchesPID = true;
@@ -1039,7 +1039,7 @@ function focusMostRecentWinOfProfile(IsRelative, Path, rootPathDefault) {
 			var fetchProp = xGetWinProp(_disp, w, '_NET_WM_ICON', XA_CARDINAL, ctypes.unsigned_long, false);
 			if (fetchProp != None) {
 				_matchingWins[_matchingWins.length-1]._NET_WM_ICON = fetchProp;
-				debugOut.push('icon on this window is:' + fetchProp);
+				//debugOut.push('icon on this window is:' + fetchProp);
 			}
 		}
 		//end - get extar stuff if pid is right
@@ -1188,7 +1188,9 @@ function xGetWinProp(_DISP, tWin, tAtomName, tPropType, tPropDataCType, SINGLE) 
 		var rez_XGWP = XGetWindowProperty(_DISP, tWin, tAtom, 0, 1024, false, tPropType, returnType.address(), returnFormat.address(), nItemsReturned.address(), nBytesAfterReturn.address(), propData.address());
 		if (rez_XGWP == Success) {
 			var nElements = ctypes.cast(nItemsReturned, ctypes.unsigned_int).value;
-			debugOut.push('nElements:' + nElements);
+			if (tAtomName == '_NET_WM_WINDOW_TYPE') {
+				debugOut.push('tAtomName = "_NET_WM_WINDOW_TYPE" | nElements:' + nElements);
+			}
 			if(nElements) {
 				//var rezArr = [propData, nElements];
 				//console.log('nElements > 0:', nElements, '(should always be one, as per window should have only one pid, but its an array so lets loop through just to make sure)');
@@ -1216,18 +1218,20 @@ function xGetWinProp(_DISP, tWin, tAtomName, tPropType, tPropDataCType, SINGLE) 
 					var dat = dataList.addressOfElement(i).contents;
 					//console.log('dat:', dat);
 				}
-				debugOut.push('dat pre xfree:' + dat);
+				//debugOut.push('dat pre xfree:' + dat);
 				var rezXF = XFree(propData); //i dont know if i should xfree anything // i think mamybe only xf after casting? maybe? or maybe if nElements > 0, for now going with nEl > 0
 				//console.log('rez of XFree on propData:', rezXF);
-				debugOut.push('rezXF on propData:' + rezXF + ' | propName:' + tAtomName);
+				debugOut.push('rezXF on propData when nElements not 0:' + rezXF + ' | propName:' + tAtomName + ' nElements:' + nElements);
 				if (SINGLE) {
-					debugOut.push('dat:' + dat);
+					//debugOut.push('dat:' + dat);
 					return dat;
 				} else {
-					debugOut.push('retDatArr:' + retDatArr);
+					//debugOut.push('retDatArr:' + retDatArr);
 					return retDatArr;
 				}
-			} else {
+			} else {			
+				var rezXF = XFree(propData); //i dont know if i should xfree anything // i think mamybe only xf after casting? maybe? or maybe if nElements > 0, for now going with nEl > 0
+				debugOut.push('rezXF on propData when nElements == 0:' + rezXF + ' | propName:' + tAtomName + ' nElements:' + nElements);
 				//console.log('no elements, nElements:', nElements, 'THUS meaning no pid on this window');
 				return None;
 			}
