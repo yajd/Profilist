@@ -2446,7 +2446,7 @@ PrefListener.prototype.watchBranches[myPrefBranch] = { //have to do it this way 
 		},
 		'dev-builds': {
 			owned: true,
-			default: '',
+			default: '[]',
 			value: undefined,
 			type: Ci.nsIPrefBranch.PREF_STRING,
 			on_PrefOnObj_Change: writePrefToIni
