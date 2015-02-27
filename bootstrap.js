@@ -4999,9 +4999,9 @@ function makeDesktopShortcut(for_ini_key) {
 			}
 			
 			var makeDeskAlias = function() {
-				var pathToTarget = OS.Path.join(profToolkit.path_iniDir, 'profilist_data', 'profile_launchers', theLauncherAndAliasName + '.app');
+				var pathToTargetDskAl = OS.Path.join(profToolkit.path_iniDir, 'profilist_data', 'profile_launchers', theLauncherAndAliasName + '.app');
 				var pathToAlias = OS.Path.join(OS.Constants.Path.desktopDir, theLauncherAndAliasName);
-				var promise_makeDeskAlias = delAliasThenMake(pathToTarget, pathToAlias)
+				var promise_makeDeskAlias = delAliasThenMake(pathToTargetDskAl, pathToAlias)
 				promise_makeDeskAlias.then(
 					function(aVal) {
 						console.log('Fullfilled - promise_makeDeskAlias - ', aVal);
@@ -5031,7 +5031,7 @@ function makeDesktopShortcut(for_ini_key) {
 				//assume it exists
 				//but lets verify just in case
 				var pathToExecViaLauncher = OS.Path.join(profToolkit.path_iniDir, 'profilist_data', 'profile_launchers', theLauncherAndAliasName + '.app', 'Contents', 'MacOS', 'profilist-' + ini[for_ini_key].props['Profilist.launcher']);
-				var promise_launcherExists = OS.File.readEncoded(pathToTarget);
+				var promise_launcherExists = OS.File.readEncoded(pathToExecViaLauncher);
 				promise_launcherExists.then(
 					function(aVal) {
 						console.log('Fullfilled - promise_launcherExists - ', aVal);
