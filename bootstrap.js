@@ -4810,7 +4810,17 @@ function makeLauncher(for_ini_key, ch_name) {
 				var promise_execWrittenAndPermed = deferred_execWrittenAndPermed.promise;
 				
 				var path_profilistExec = OS.Path.join(path_toLauncher, 'Contents', 'MacOS', 'profilist-' + bundleIdentifer);
-				var promise_writeExec = OS.File.writeAtomic(path_profilistExec, '#!/bin/sh\nexec "' + path_toFxBin + '" -profile "' + getPathToProfileDir(for_ini_key) + '" -no-remote', {tmpPath:path_profilistExec+'.profilist.bkp'});
+				var identJson = {
+					build: path_toFxBin,
+					iconName: getIconName(for_ini_key, theChName),
+					identifier: bundleIdentifer
+				};
+				var execConts = [
+					'#!/bin/sh',
+					'##' + JSON.stringify(identJson) + '##',
+					'exec "' + path_toFxBin + '" -profile "' + getPathToProfileDir(for_ini_key) + '" -no-remote'
+				];
+				var promise_writeExec = OS.File.writeAtomic(path_profilistExec, execConts.join('\n'), {tmpPath:path_profilistExec+'.profilist.bkp'});
 
 				promise_writeExec.then(
 					function(aVal) {
@@ -4991,7 +5001,7 @@ function makeDesktopShortcut(for_ini_key) {
 			var makeDeskAlias = function() {
 				var pathToTarget = OS.Path.join(profToolkit.path_iniDir, 'profilist_data', 'profile_launchers', theLauncherAndAliasName + '.app');
 				var pathToAlias = OS.Path.join(OS.Constants.Path.desktopDir, theLauncherAndAliasName);
-				var promise_makeDeskAlias = OS.File.unixSymLink(pathToTarget, pathToAlias)
+				var promise_makeDeskAlias = delAliasThenMake(pathToTarget, pathToAlias)
 				promise_makeDeskAlias.then(
 					function(aVal) {
 						console.log('Fullfilled - promise_makeDeskAlias - ', aVal);
@@ -5000,13 +5010,13 @@ function makeDesktopShortcut(for_ini_key) {
 						// end - do stuff here - promise_makeDeskAlias
 					},
 					function(aReason) {
-						if (aReason.unixErrno == 17) {
-							deferred_makeDesktopShortcut.resolve('desktop shortcut already exists');
-						} else {
+						//if (aReason.unixErrno == 17) {
+						//	deferred_makeDesktopShortcut.resolve('desktop shortcut already exists'); //should never happen as i del first
+						//} else {
 							var rejObj = {name:'promise_makeDeskAlias', aReason:aReason};
 							console.warn('Rejected - promise_makeDeskAlias - ', rejObj);
 							deferred_makeDesktopShortcut.reject(rejObj);
-						}
+						//}
 					}
 				).catch(
 					function(aCaught) {
@@ -5020,18 +5030,43 @@ function makeDesktopShortcut(for_ini_key) {
 			if ('Profilist.launcher' in ini[for_ini_key].props) {
 				//assume it exists
 				//but lets verify just in case
-				var pathToTarget = OS.Path.join(profToolkit.path_iniDir, 'profilist_data', 'profile_launchers', theLauncherAndAliasName + '.app');
-				var promise_launcherExists = OS.File.exists(pathToTarget);
+				var pathToExecViaLauncher = OS.Path.join(profToolkit.path_iniDir, 'profilist_data', 'profile_launchers', theLauncherAndAliasName + '.app', 'Contents', 'MacOS', 'profilist-' + ini[for_ini_key].props['Profilist.launcher']);
+				var promise_launcherExists = OS.File.readEncoded(pathToTarget);
 				promise_launcherExists.then(
 					function(aVal) {
 						console.log('Fullfilled - promise_launcherExists - ', aVal);
 						// start - do stuff here - promise_launcherExists
-						makeDeskAlias();
+						var identingJson = aVal.match(/##(.*?)##/);
+						console.info('identingJson:', identingJson);
+						if (!identingJson) {
+							throw 'failed to get identingJson';
+						} else {
+							var needUpdateLauncher = false;
+							if (identingJson.iconName != getIconName(for_ini_key, theChName)) {
+								console.log('icon of curent cut doesnt match so need to update that', 'getIconName(for_ini_key, theChName):', getIconName(for_ini_key, theChName), 'identingJson.iconName:', identingJson.iconName);
+								needUpdateLauncher = true;
+							} else if (identingJson.build != path_toFxApp) {
+								console.log('the build inside this cut doesnt match path_toFxApp', 'path_toFxApp:', path_toFxApp, 'identingJson.build:', identingJson.build);
+								needUpdateLauncher = true;
+							}
+							if (needUpdateLauncher) {
+								makeLauncherThenAlias();
+							} else {
+								console.log('no update needed, so resolve as saying it already exists');
+								deferred_makeDesktopShortcut.resolve('already exists with right params');
+							}
+						}
 						// end - do stuff here - promise_launcherExists
 					},
 					function(aReason) {
 						console.error('THIS SHOULD NEVER HAPPEN, as if Profilist.launcher is ini, then launcher should exist. launcher does not exist even though Profilist.launcher is in ini for this key, so makeLauncher then try makeAlias again');
-						makeLauncherThenAlias();
+						if (aReason.becauseNoSuchFile) {
+							makeLauncherThenAlias();
+						} else {
+							var rejObj = {name:'promise_launcherExists', aReason:aReason};
+							console.error('Caught - promise_launcherExists - ', rejObj);
+							deferred_makeDesktopShortcut.reject(rejObj);
+						}
 					}
 				).catch(
 					function(aCaught) {
