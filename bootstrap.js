@@ -4486,7 +4486,7 @@ function makeLauncher(for_ini_key, ch_name) {
 			
 			var deferred_copyContents = new Deferred();
 			var deferred_writeModdedPlist = new Deferred();
-			//var deferred_xattr = new Deferred();
+			var deferred_xattr = new Deferred();
 			promiseAllArr_makeLauncherDirAndFiles.push(deferred_copyContents.promise);
 			promiseAllArr_makeLauncherDirAndFiles.push(deferred_writeModdedPlist.promise);
 			//promiseAllArr_makeLauncherDirAndFiles.push(deferred_xattr.promise);
@@ -4643,7 +4643,7 @@ function makeLauncher(for_ini_key, ch_name) {
 				);
 			}
 			// end - do_writeModdedPlist
-			/*
+			
 			// start - do_xattr
 			function do_xattr() {
 				// start - xattr				
@@ -4668,7 +4668,7 @@ function makeLauncher(for_ini_key, ch_name) {
 				// end - xattr
 			}
 			// end - do_xattr
-			*/
+			
 			// start - do_makeTopDirs
 			var do_makeTopDirs = function() {
 				var promise_makeTopLevelDirs = makeDir_Bug934283(path_toLauncherContents, {from:profToolkit.path_iniDir});
@@ -4678,7 +4678,7 @@ function makeLauncher(for_ini_key, ch_name) {
 						// start - do stuff here - promise_makeTopLevelDirs
 						do_copyContents();
 						do_writeModdedPlist();
-						//do_xattr();
+						do_xattr();
 						// end - do stuff here - promise_makeTopLevelDirs
 					},
 					function(aReason) {
