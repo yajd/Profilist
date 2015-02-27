@@ -4451,11 +4451,11 @@ function makeLauncher(for_ini_key, ch_name) {
 		var promiseAllArr_makeMac = [];
 		
 		var deferred_makeLauncherDirAndFiles = new Deferred(); // make top level dirs, then IN PARALELL (copy contents and write modded plist) then resolve deferred_makeLauncherDirFiles
-		var deferred_writeProfileExec_Xattr = new Deferred(); //write the executble in the OS.Path.join(path_toFxApp, 'Contents', 'MacOS');
+		var deferred_writeExecAndPermIt = new Deferred(); //write the executble in the OS.Path.join(path_toFxApp, 'Contents', 'MacOS');
 		var deferred_writeIcon = new Deferred(); //create badged tied icon in OS.Path.join(path_toFxApp, 'Contents', 'Resources');
 		
 		promiseAllArr_makeMac.push(deferred_makeLauncherDirAndFiles.promise);
-		promiseAllArr_makeMac.push(deferred_writeProfileExec_Xattr.promise);
+		promiseAllArr_makeMac.push(deferred_writeExecAndPermIt.promise);
 		promiseAllArr_makeMac.push(deferred_writeIcon.promise);
 		
 		var promiseAll_makeMac = Promise.all(promiseAllArr_makeMac);
@@ -4658,7 +4658,7 @@ function makeLauncher(for_ini_key, ch_name) {
 						if (aSubject.exitValue == '0') {
 							deferred_xattr.resolve('success xattr');
 						} else {
-							deferred_xattr.resolve('exitValue is not 0, thus xattr failed, exitValue is: "' + aSubject.exitValue + '"'); //note:debug i made this resolve should reject
+							deferred_xattr.resolve('exitValue is not 0, thus xattr failed, but resolving as it returns 1 when run on something which has no quarantine so had nothing to remove, exitValue is: "' + aSubject.exitValue + '"'); //note:debug i made this resolve should reject
 						}
 					}
 				};
@@ -4712,7 +4712,7 @@ function makeLauncher(for_ini_key, ch_name) {
 			var path_toIcnsToCopy;
 			if (name_launcherIcns.indexOf('CHANNEL') == 0) {
 				// copy icon from path_toFxApp
-				path_toIcnsToCopy = OS.Path.join(path_toFxApp, 'Contents', 'Resources', 'firefox.icns'); //its firefox.icns in not just release, its same in nightly, aurora, and beta
+				path_toIcnsToCopy = OS.Path.join(path_toFxApp, 'Contents', 'Resources', 'firefox.icns'); //its firefox.icns in not just release, its same in nightly, aurora, and beta // can use path_toLauncher but for that i have to wait for aliases to finish copying
 			} else {
 				var hasLauncherIcon = true;
 				path_toIcnsToCopy = OS.Path.join(profToolkit.path_iniDir, 'profilist_data', 'launcher_icons', name_launcherIcns + '.icns');
@@ -4775,8 +4775,8 @@ function makeLauncher(for_ini_key, ch_name) {
 		}
 		// end - do_writeIcon
 		
-		// start - do_writeProfileExec_Xattr
-		var do_writeProfileExec_Xattr = function() {
+		// start - do_writeExecAndPermIt
+		var do_writeExecAndPermIt = function() {
 				// start - do_setPerms
 				var do_setPerms = function() {
 					var promise_setPermsScript = OS.File.setPermissions(path_profilistExec, {
@@ -4786,29 +4786,27 @@ function makeLauncher(for_ini_key, ch_name) {
 						function(aVal) {
 							console.log('Fullfilled - promise_setPermsScript - ', aVal);
 							// start - do stuff here - promise_setPermsScript
-							deferred_writeProfileExec_Xattr.resolve('perms set');
+							deferred_writeExecAndPermIt.resolve('perms set');
 							// end - do stuff here - promise_setPermsScript
 						},
 						function(aReason) {
 							var rejObj = {name:'promise_setPermsScript', aReason:aReason};
 							console.warn('Rejected - promise_setPermsScript - ', rejObj);
-							deferred_writeProfileExec_Xattr.reject(rejObj);
+							deferred_writeExecAndPermIt.reject(rejObj);
 						}
 					).catch(
 						function(aCaught) {
 							var rejObj = {name:'promise_setPermsScript', aCaught:aCaught};
 							console.error('Caught - promise_setPermsScript - ', rejObj);
-							deferred_writeProfileExec_Xattr.reject(rejObj);
+							deferred_writeExecAndPermIt.reject(rejObj);
 						}
 					);
 				}
 				// end - do_setPerms
 				
 				// start - write exec
-				var deferred_execWrittenAndPermed = new Deferred();
-				var promise_execWrittenAndPermed = deferred_execWrittenAndPermed.promise;
 				
-				var path_profilistExec = OS.Path.join(path_toLauncher, 'Contents', 'MacOS', 'profilist-' + bundleIdentifer);
+				var path_profilistExec = OS.Path.join(/*path_toLauncher*/path_toFxApp, 'Contents', 'MacOS', 'profilist-' + bundleIdentifer); //i use path_toFxApp instead of path_toLauncher, so this way i dont have to wait for aliases to finish copying
 				var identJson = {
 					build: path_toFxBin,
 					iconName: getIconName(for_ini_key, theChName),
@@ -4831,22 +4829,22 @@ function makeLauncher(for_ini_key, ch_name) {
 					function(aReason) {
 						var rejObj = {name:'promise_writeExec', aReason:aReason};
 						console.warn('Rejected - promise_writeExec - ', rejObj);
-						deferred_execWrittenAndPermed.reject(rejObj);
+						writeExecAndPermIt.reject(rejObj);
 					}
 				).catch(
 					function(aCaught) {
 						var rejObj = {name:'promise_writeExec', aCaught:aCaught};
 						console.error('Caught - promise_writeExec - ', rejObj);
-						deferred_execWrittenAndPermed.reject(rejObj);
+						writeExecAndPermIt.reject(rejObj);
 					}
 				);
 				// end - write exec			
 		}
-		// end - do_writeProfileExec_Xattr
+		// end - do_writeExecAndPermIt
 		
 		do_makeLauncherDirAndFiles();
 		do_writeIcon();
-		do_writeProfileExec_Xattr();
+		do_writeExecAndPermIt();
 	};
 	
 	// end - setup getChName this then triggers the right os shortcut mechanism
@@ -5041,6 +5039,7 @@ function makeDesktopShortcut(for_ini_key) {
 							throw 'failed to get identingJson';
 						} else {
 							var needUpdateLauncher = false;
+							identingJson = JSON.parse(identingJson[1]);
 							if (identingJson.iconName != getIconName(for_ini_key, theChName)) {
 								console.log('icon of curent cut doesnt match so need to update that', 'getIconName(for_ini_key, theChName):', getIconName(for_ini_key, theChName), 'identingJson.iconName:', identingJson.iconName);
 								needUpdateLauncher = true;
