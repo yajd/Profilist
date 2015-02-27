@@ -4489,7 +4489,7 @@ function makeLauncher(for_ini_key, ch_name) {
 			var deferred_xattr = new Deferred();
 			promiseAllArr_makeLauncherDirAndFiles.push(deferred_copyContents.promise);
 			promiseAllArr_makeLauncherDirAndFiles.push(deferred_writeModdedPlist.promise);
-			//promiseAllArr_makeLauncherDirAndFiles.push(deferred_xattr.promise);
+			promiseAllArr_makeLauncherDirAndFiles.push(deferred_xattr.promise);
 
 			var promiseAll_makeLauncherDirAndFiles = Promise.all(promiseAllArr_makeLauncherDirAndFiles);
 			promiseAll_makeLauncherDirAndFiles.then(
