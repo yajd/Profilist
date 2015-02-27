@@ -1,4 +1,3 @@
-// brought to yajd
 const {interfaces: Ci, utils: Cu, classes: Cc} = Components;
 const self = {
 	name: 'Profilist',
