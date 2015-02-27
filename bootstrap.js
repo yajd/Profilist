@@ -5060,7 +5060,8 @@ function makeDesktopShortcut(for_ini_key) {
 					},
 					function(aReason) {
 						console.error('THIS SHOULD NEVER HAPPEN, as if Profilist.launcher is ini, then launcher should exist. launcher does not exist even though Profilist.launcher is in ini for this key, so makeLauncher then try makeAlias again');
-						if (aReason.becauseNoSuchFile) {
+						var deepestReason = aReason; while (deepestReason.aReason) { deepestReason = deepestReason.aReason }
+						if (deepestReason.becauseNoSuchFile) {
 							makeLauncherThenAlias();
 						} else {
 							var rejObj = {name:'promise_launcherExists', aReason:aReason};
