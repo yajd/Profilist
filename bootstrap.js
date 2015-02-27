@@ -5031,7 +5031,7 @@ function makeDesktopShortcut(for_ini_key) {
 				//assume it exists
 				//but lets verify just in case
 				var pathToExecViaLauncher = OS.Path.join(profToolkit.path_iniDir, 'profilist_data', 'profile_launchers', theLauncherAndAliasName + '.app', 'Contents', 'MacOS', 'profilist-' + ini[for_ini_key].props['Profilist.launcher']);
-				var promise_launcherExists = OS.File.readEncoded(pathToExecViaLauncher);
+				var promise_launcherExists = read_encoded(pathToExecViaLauncher);
 				promise_launcherExists.then(
 					function(aVal) {
 						console.log('Fullfilled - promise_launcherExists - ', aVal);
