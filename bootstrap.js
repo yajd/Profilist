@@ -4723,9 +4723,9 @@ function makeLauncher(for_ini_key, ch_name) {
 			
 			
 			var path_iconDestination = OS.Path.join(path_toFxApp, 'Contents', 'Resources', 'profilist-' + bundleIdentifer + '.icns');
-			var promise_copyIcon = OS.File.copy(path_toIcnsToCopy, path_iconDestination, {noOverwrite:false});
 			// start do_theCopy
 			var do_theCopy = function(postMake) {
+				var promise_copyIcon = OS.File.copy(path_toIcnsToCopy, path_iconDestination, {noOverwrite:false});
 				promise_copyIcon.then(
 					function(aVal) {
 						console.log('Fullfilled - promise_copyIcon - ', aVal);
@@ -4734,34 +4734,33 @@ function makeLauncher(for_ini_key, ch_name) {
 						// end - do stuff here - promise_copyIcon
 					},
 					function(aReason) {
-						if (!postMake) { // meaning this is first time trying copy
-							if (hasLauncherIcon && aReason.becauseNoSuchFile)  {
-								// have to make icon first as it doesnt exist
-								var promise_makeTheIconAsItDNE = makeIcon(for_ini_key);
-								promise_makeTheIconAsItDNE.then(
-									function(aVal) {
-										console.log('Fullfilled - promise_makeTheIconAsItDNE - ', aVal);
-										// start - do stuff here - promise_makeTheIconAsItDNE
-										do_theCopy(1);
-										// end - do stuff here - promise_makeTheIconAsItDNE
-									},
-									function(aReason) {
-										var rejObj = {name:'promise_makeTheIconAsItDNE', aReason:aReason};
-										console.warn('Rejected - promise_makeTheIconAsItDNE - ', rejObj);
-										deferred_writeIcon.reject(rejObj);
-									}
-								).catch(
-									function(aCaught) {
-										var rejObj = {name:'promise_makeTheIconAsItDNE', aCaught:aCaught};
-										console.error('Caught - promise_makeTheIconAsItDNE - ', rejObj);
-										deferred_writeIcon.reject(rejObj);
-									}
-								);
-							}
+						if (!postMake && hasLauncherIcon && aReason.becauseNoSuchFile) { // meaning this is first time trying copy
+							// have to make icon first as it doesnt exist
+							var promise_makeTheIconAsItDNE = makeIcon(for_ini_key);
+							promise_makeTheIconAsItDNE.then(
+								function(aVal) {
+									console.log('Fullfilled - promise_makeTheIconAsItDNE - ', aVal);
+									// start - do stuff here - promise_makeTheIconAsItDNE
+									do_theCopy(1);
+									// end - do stuff here - promise_makeTheIconAsItDNE
+								},
+								function(aReason) {
+									var rejObj = {name:'promise_makeTheIconAsItDNE', aReason:aReason};
+									console.warn('Rejected - promise_makeTheIconAsItDNE - ', rejObj);
+									deferred_writeIcon.reject(rejObj);
+								}
+							).catch(
+								function(aCaught) {
+									var rejObj = {name:'promise_makeTheIconAsItDNE', aCaught:aCaught};
+									console.error('Caught - promise_makeTheIconAsItDNE - ', rejObj);
+									deferred_writeIcon.reject(rejObj);
+								}
+							);
+						} else {
+							var rejObj = {name:'promise_copyIcon', aReason:aReason};
+							console.warn('Rejected - promise_copyIcon - ', rejObj);
+							deferred_writeIcon.reject(rejObj);
 						}
-						var rejObj = {name:'promise_copyIcon', aReason:aReason};
-						console.warn('Rejected - promise_copyIcon - ', rejObj);
-						deferred_writeIcon.reject(rejObj);
 					}
 				).catch(
 					function(aCaught) {
