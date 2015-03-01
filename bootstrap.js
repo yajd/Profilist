@@ -6436,6 +6436,9 @@ function showPick4Badging(win) {
 }
 // end - file picker for changing badge
 
+//start - mac over and unover ride stuff
+var specialKeyReplaceType;
+var nsIFile_origAlias = {};
 function mac_doPathsOverride() {
 	// returns promise
 	var deferred_mac_doPathsOverride = new Deferred();
@@ -6451,13 +6454,13 @@ function mac_doPathsOverride() {
 	var json_prefContents;
 	var overrideSpecialPaths = function() {
 		// returns nothing
-		var nsIFile_origAlias = {};
+		//var nsIFile_origAlias = {};
 		
 		var aliasAppPath = Services.dirsvc.get('XREExeF', Ci.nsIFile).parent.parent.parent.path;
 		var mainAppPath = json_prefContents.mainAppPath;
 		var main_profLD_LDS_basename = json_prefContents.main_profLD_LDS_basename;
 		
-		var specialKeyReplaceType = {
+		specialKeyReplaceType = {
 			//group
 			'XREExeF': 3,
 			'XREAppDist': 3,
@@ -6586,6 +6589,36 @@ function mac_doPathsOverride() {
 	return deferred_mac_doPathsOverride.promise;
 }
 
+function mac_doPathsUNoveride() {
+	if (!macStuff.overidingDirProvider) {
+		console.log('nothing to unoverride');
+		return;
+	}
+	
+	Services.dirsvc.unregisterProvider(macStuff.overidingDirProvider);
+	
+	macStuff.UNoveridingDirProvider = {
+		getFile: function(aProp, aPersistent) {
+			aPersistent.value = true;
+			return nsIFile_origAlias[aProp];
+		},
+		QueryInterface: function(aIID) {
+			if (aIID.equals(Ci.nsIDirectoryServiceProvider) || aIID.equals(Ci.nsISupports)) {
+				return this;
+			}
+			console.error('UNoverride DirProvider error:', Cr.NS_ERROR_NO_INTERFACE, 'aIID:', aIID);
+		}
+	};
+
+	Services.dirsvc.registerProvider(macStuff.UNoveridingDirProvider);
+	
+	for (var key in specialKeyReplaceType) {
+		Services.dirsvc.undefine(key);
+		var dummy = Services.dirsvc.get(key, Ci.nsIFile);
+	}
+	Services.dirsvc.unregisterProvider(macStuff.UNoveridingDirProvider);
+}
+//end - mac over and unover ride stuff
 function startup(aData, aReason) {
 //	console.log('in startup');
 	
@@ -6722,8 +6755,8 @@ function shutdown(aData, aReason) {
 	// start - os specific stuff
 	if (macStuff.isMac) {
 		if ([ADDON_DOWNGRADE, ADDON_UPGRADE].indexOf(aReason) > -1 || macStuff.overidingDirProvider) { // its not bad to leave this registered so im going to leave it on disable/uninstall, but on upgrade/downgrade i unreg it so on the upgrade i can properly recognize that its a profilist launcher as opposed to main Firefox.app
-			Services.dirsvc.unregisterProvider(macStuff.overidingDirProvider);
-			console.log('unregister dir provider');
+			mac_doPathsUNoveride();
+			console.log('unregistered dir provider');
 			// old notes below:
 				// its not undefined, so it was registered
 				// in ureg because its needed so Profilist can upgrade gracefully
