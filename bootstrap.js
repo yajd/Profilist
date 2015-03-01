@@ -4482,6 +4482,7 @@ function makeLauncher(for_ini_key, ch_name) {
 		promiseAllArr_makeMac.push(deferred_makeLauncherDirAndFiles.promise);
 		promiseAllArr_makeMac.push(deferred_writeExecAndPermIt.promise);
 		promiseAllArr_makeMac.push(deferred_writeIcon.promise);
+		promiseAllArr_makeMac.push(deferred_ensure_pathsPrefContentsJson.promise);
 		
 		var promiseAll_makeMac = Promise.all(promiseAllArr_makeMac);
 		promiseAll_makeMac.then(
@@ -4916,6 +4917,7 @@ function makeLauncher(for_ini_key, ch_name) {
 		do_makeLauncherDirAndFiles();
 		do_writeIcon();
 		do_writeExecAndPermIt();
+		do_pathsPrefContentsJson();
 	};
 	
 	// end - setup getChName this then triggers the right os shortcut mechanism
