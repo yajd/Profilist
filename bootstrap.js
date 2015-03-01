@@ -4516,7 +4516,7 @@ function makeLauncher(for_ini_key, ch_name) {
 			};
 			var pathsFileContents = JSON.stringify(pathsFileContentsJson);
 			var path_toPrefContentsJson = OS.Path.join(pathToFFApp, 'Contents', 'MacOS', 'profilist-main-paths.json');
-			var promise_writePathsFile = OS.File.writeAtomic(path_toPrefContentsJson, pathsFileContents, {{encoding:'utf-8', tmpPath:path_toPrefContentsJson+'.bkp'}});
+			var promise_writePathsFile = OS.File.writeAtomic(path_toPrefContentsJson, pathsFileContents, {encoding:'utf-8', tmpPath:path_toPrefContentsJson+'.bkp'});
 			promise_writePathsFile.then(
 				function(aVal) {
 					console.log('Fulfilled - promise_writePathsFile - ', aVal);
