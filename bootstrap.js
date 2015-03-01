@@ -6711,9 +6711,9 @@ function shutdown(aData, aReason) {
 	
 	// start - os specific stuff
 	if (macStuff.isMac) {
-		if (macStuff.overidingDirProvider) {
-			// its not bad to leave this registered so im going to leave it
-			//Services.dirsvc.unregisterProvider(macStuff.overidingDirProvider);
+		if ([ADDON_DOWNGRADE, ADDON_UPGRADE].indexOf(aReason) > -1 || macStuff.overidingDirProvider) { // its not bad to leave this registered so im going to leave it on disable/uninstall, but on upgrade/downgrade i unreg it so on the upgrade i can properly recognize that its a profilist launcher as opposed to main Firefox.app
+			Services.dirsvc.unregisterProvider(macStuff.overidingDirProvider);
+			console.log('unregister dir provider');
 			// old notes below:
 				// its not undefined, so it was registered
 				// in ureg because its needed so Profilist can upgrade gracefully
