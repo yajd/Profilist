@@ -4510,11 +4510,11 @@ function makeLauncher(for_ini_key, ch_name) {
 			var path_toPrefContentsJson = OS.Path.join(OS.Path.dirname(path_toFxBin), 'profilist-main-paths.json');
 			
 			// start - write main app paths file
-			var pathsFileContentsJson = {
+			var json_prefContents = {
 				mainAppPath: path_toFxApp, //Services.dirsvc.get('XREExeF', Ci.nsIFile).parent.parent.parent.path,
 				main_profLD_LDS_basename: Services.dirsvc.get('ProfLD', Ci.nsIFile).parent.path
 			};
-			var pathsFileContents = JSON.stringify(pathsFileContentsJson);
+			var pathsFileContents = JSON.stringify(json_prefContents);
 			var path_toPrefContentsJson = OS.Path.join(pathToFFApp, 'Contents', 'MacOS', 'profilist-main-paths.json');
 			var promise_writePathsFile = OS.File.writeAtomic(path_toPrefContentsJson, pathsFileContents, {encoding:'utf-8', tmpPath:path_toPrefContentsJson+'.bkp'});
 			promise_writePathsFile.then(
@@ -6432,21 +6432,22 @@ function mac_doPathsOverride() {
 	// returns promise
 	var deferred_mac_doPathsOverride = new Deferred();
 	
+	var string_prefContents;
 	try {
-		pathsPrefContentsJson = Services.prefs.getCharPref('extension.Profilist@jetpack.mac-paths-fixup');
+		string_prefContents = Services.prefs.getCharPref('extension.Profilist@jetpack.mac-paths-fixup');
 	} catch (ex if ex.result == Cr.NS_ERROR_UNEXPECTED) {
 		// Cr.NS_ERROR_UNEXPECTED is what is thrown when pref doesnt exist
 		throw ex;
 	}
 	
-	var pathsFileContentsJson;
+	var json_prefContents;
 	var overrideSpecialPaths = function() {
 		// returns nothing
 		var nsIFile_origAlias = {};
 		
 		var aliasAppPath = Services.dirsvc.get('XREExeF', Ci.nsIFile).parent.parent.parent.path;
-		var mainAppPath = pathsFileContentsJson.mainAppPath;
-		var main_profLD_LDS_basename = pathsFileContentsJson.main_profLD_LDS_basename;
+		var mainAppPath = json_prefContents.mainAppPath;
+		var main_profLD_LDS_basename = json_prefContents.main_profLD_LDS_basename;
 		
 		var specialKeyReplaceType = {
 			//group
@@ -6540,9 +6541,9 @@ function mac_doPathsOverride() {
 		console.log('oevrrid');
 	};
 	
-	if (pathsPrefContentsJson) {
+	if (string_prefContents) {
 		// actually forget it, just on shutdown i should unregister the dirProvider
-		pathsFileContentsJson = JSON.parse(pathsPrefContentsJson);
+		json_prefContents = JSON.parse(pathsPrefContentsJson);
 		overrideSpecialPaths();
 	} else {
 		//var path_to_ThisPathsFile = OS.Path.join(Services.dirsvc.get('GreBinD', Ci.nsIFile).path, 'profilist-main-paths.json'); // because immediate children of Contents are aliased specifically the Resource dir, i can just access it like this, no matter if overrid or not, and it (GreD) is not overrid at this point		
@@ -6552,11 +6553,11 @@ function mac_doPathsOverride() {
 			function(aVal) {
 				console.log('Fullfilled - promise_readThisPathsFile - ', aVal);
 				// start - do stuff here - promise_readThisPathsFile
-				pathsPrefContentsJson = aVal;
-				pathsFileContentsJson = JSON.parse(aVal);
+				string_prefContents = aVal;
+				json_prefContents = JSON.parse(aVal);
 				overrideSpecialPaths(); //lets go stragiht to override, we'll right the pref afterwards, just to save a ms or two
 				Services.prefs.setCharPref('extension.Profilist@jetpack.mac-paths-fixup', aVal); // im not going to set a default on this, because if i do then on startup the pref wont exist so it would have to written first, which would require me to read the file on disk, which we want to avoid
-				do_profilistStartup();
+				deferred_mac_doPathsOverride.resolve('paths overrid');
 				// end - do stuff here - promise_readThisPathsFile
 			},
 			function(aReason) {
