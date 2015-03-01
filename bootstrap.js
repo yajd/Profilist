@@ -4510,9 +4510,15 @@ function makeLauncher(for_ini_key, ch_name) {
 			var path_toPrefContentsJson = OS.Path.join(OS.Path.dirname(path_toFxBin), 'profilist-main-paths.json');
 			
 			// start - write main app paths file
+			// if custom then we cant set main_profLD_LDS_basename to ProfLD as ProfLD of custom from alias and reg is path to the custom profile dir
+			// so to get right main_profLD_LDS_basename from castom we have to 
+			
+			// btw in reg non-custom-path profile (relative profile) ProfLD != ProfD AND in reg custom-profile ProfLD == ProfD
+			// in alias of realtive profile, ProfLD needs fixing, whle ProfD does not
+			//
 			var json_prefContents = {
 				mainAppPath: path_toFxApp, //Services.dirsvc.get('XREExeF', Ci.nsIFile).parent.parent.parent.path,
-				main_profLD_LDS_basename: Services.dirsvc.get('ProfLD', Ci.nsIFile).parent.path
+				main_profLD_LDS_basename: Services.dirsvc.get('DefProfLRt', Ci.nsIFile).path
 			};
 			var pathsFileContents = JSON.stringify(json_prefContents);
 			var path_toPrefContentsJson = OS.Path.join(pathToFFApp, 'Contents', 'MacOS', 'profilist-main-paths.json');
@@ -6491,7 +6497,8 @@ function mac_doPathsOverride() {
 					// ProfLD or ProfLDS are keys, and they contain either DefProfLRt or DefProfRt, so its a realtive profile
 					// IsRelative == 1
 					// so need fix up on ProfLD and ProfLDS
-					var newAlias_ProfLD_or_ProfLDS = nsIFile_origAlias[key].path.replace(nsIFile_origAlias['ProfLD'].parent.path, main_profLD_LDS_basename);
+					var newAlias_ProfLD_or_ProfLDS = nsIFile_origAlias[key].path.replace(nsIFile_origAlias[key].parent.path, main_profLD_LDS_basename);
+					// disovered that DefProfLRt is correct in alias of rel path and abs path. so i dont have to store it, can just do replace .parent.path with : `var newAlias_ProfLD_or_ProfLDS = nsIFile_origAlias[key].path.replace(nsIFile_origAlias[key].parent.path, Services.dirsvc.get('DefProfLRt', Ci.nsIFile).path);`
 					return new FileUtils.File(newAlias_ProfLD_or_ProfLDS);
 				} else {
 					//IsRelative == 0
@@ -6543,7 +6550,7 @@ function mac_doPathsOverride() {
 	
 	if (string_prefContents) {
 		// actually forget it, just on shutdown i should unregister the dirProvider
-		json_prefContents = JSON.parse(pathsPrefContentsJson);
+		json_prefContents = JSON.parse(string_prefContents);
 		overrideSpecialPaths();
 	} else {
 		//var path_to_ThisPathsFile = OS.Path.join(Services.dirsvc.get('GreBinD', Ci.nsIFile).path, 'profilist-main-paths.json'); // because immediate children of Contents are aliased specifically the Resource dir, i can just access it like this, no matter if overrid or not, and it (GreD) is not overrid at this point		
