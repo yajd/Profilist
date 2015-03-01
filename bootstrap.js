@@ -6557,6 +6557,7 @@ function mac_doPathsOverride() {
 		// actually forget it, just on shutdown i should unregister the dirProvider
 		json_prefContents = JSON.parse(string_prefContents);
 		overrideSpecialPaths();
+		deferred_mac_doPathsOverride.resolve('paths overrid');
 	} else {
 		//var path_to_ThisPathsFile = OS.Path.join(Services.dirsvc.get('GreBinD', Ci.nsIFile).path, 'profilist-main-paths.json'); // because immediate children of Contents are aliased specifically the Resource dir, i can just access it like this, no matter if overrid or not, and it (GreD) is not overrid at this point		
 		var path_to_ThisPathsFile = OS.Path.join(Services.dirsvc.get('XREExeF', Ci.nsIFile).parent.path, 'profilist-main-paths.json'); // because immediate children of Contents are aliased specifically the Resource dir, i can just access it like this, no matter if overrid or not, and it (GreD) is not overrid at this point		
@@ -6779,61 +6780,7 @@ function uninstall(aData, aReason) {
 }
 
 // start - custom to profilist helper functions
-function getImg_of_exactOrNearest_Bigger_then_Smaller(targetSize, objOfImgs) {
-	// objOfImgs should be an object with key's representing the size of the image. images are expected to be square. so size is == height == width of image
-	// objOfImgs should hvae the Image() loaded in objOfImgs[k].Image
-	// finds and returns the image which matches targetSize, if not found then it returns the image in objOfImgs that is immediately bigger, if nothing bigger, then returns what it is immediately smaller
-	
-	//objOfImgs should have key of the size of the image. the size of the img should be square. and each item should be an object of {Image:Image()}			
-	var nearestDiff;
-	var nearestKey;
-	for (var k in objOfImgs) {
-		var cDiff = k - targetSize;
-		if (cDiff === 0) {
-			nearestKey = k;
-			nearestDiff = 0;
-			break;
-		} else if (nearestKey === undefined) {
-			nearestKey = k;
-			nearestDiff = cDiff;					
-		} else if (cDiff < 0) {
-			// k.Image is smaller then targetSize
-			if (nearestDiff > 0) {
-				// already have a key of something bigger than targetSize so dont take this to holder, as k.Image a smaller
-			} else {
-				// then nearestDiff in holder is something smaller then targetSize
-				// take to holder if this is closer to 0 then nearestDiff
-				if (cDiff - targetSize < nearestDiff - targetSize) {
-					nearestDiff = cDiff;
-					nearestKey = k;
-				}
-			}
-		} else {
-			// cDiff is > 0
-			if (nearestDiff < 0) {
-				// the current in holder is a smaller then targetSize, so lets take this one as its a bigger
-				nearestDiff = cDiff;
-				nearestKey = k;
-			} else {
-				//nearestDiff is positive, and so is cDiff // being positive means that the k.thatKey is bigger then targetSize
-				//take the key of whichever is closer to target, so whichever is smaller
-				if (cDiff < nearestDiff) {
-					nearestDiff = cDiff;
-					nearestKey = k;
-				}
-			}
-			// bigger then targetSize takes priority so always take it, if its closer then nearestDiff in holder
-			if (cDiff - targetSize < nearestDiff - targetSize) {
-				nearestDiff = cDiff;
-				nearestKey = k;
-			}					
-		}
-	}
-	
-	console.log('the nearest found is of size: ', nearestKey, 'returning img:', objOfImgs[nearestKey].Image.toString());
-	
-	return objOfImgs[nearestKey].Image;
-}
+
 // end - custom to profilist helper functions
 
 // start - common helper functions
