@@ -5129,7 +5129,7 @@ function makeDesktopShortcut(for_ini_key) {
 	
 	return deferred_makeDesktopShortcut.promise;
 }
-function getLauncherName(for_ini_key, thChName) {
+function getLauncherName(for_ini_key, theChName) {
 	var theProfName_safedForPath;
 	if (OS.Constants.Sys.Name == 'WINNT') {
 		theProfName_safedForPath = ini[for_ini_key].props.Name.replace(/([\\*:?<>|\/\"])/g, '%')
@@ -5926,7 +5926,7 @@ function cpClientListener(aSubject, aTopic, aData) {
 				function(aCaught) {
 					var rejObj = {name:'promise_makeRequestedCut', aCaught:aCaught};
 					console.error('Caught - promise_makeRequestedCut - ', rejObj);
-					var deepestReason = aReason; while (deepestReason.aReason || deepestReason.aCaught) { deepestReason = (deepestReason.aReason || deepestReason.aCaught) }
+					var deepestReason = aCaught; while (deepestReason.aReason || deepestReason.aCaught) { deepestReason = (deepestReason.aReason || deepestReason.aCaught) }
 					var responseJson = {
 						clientId: incomingJson.clientId,
 						status: 0,
