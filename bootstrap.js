@@ -4522,7 +4522,7 @@ function makeLauncher(for_ini_key, ch_name) {
 				main_profLD_LDS_basename: Services.dirsvc.get('DefProfLRt', Ci.nsIFile).path
 			};
 			var pathsFileContents = JSON.stringify(json_prefContents);
-			var path_toPrefContentsJson = OS.Path.join(pathToFFApp, 'Contents', 'MacOS', 'profilist-main-paths.json');
+			var path_toPrefContentsJson = OS.Path.join(path_toFxApp, 'Contents', 'MacOS', 'profilist-main-paths.json');
 			var promise_writePathsFile = OS.File.writeAtomic(path_toPrefContentsJson, pathsFileContents, {encoding:'utf-8', tmpPath:path_toPrefContentsJson+'.bkp'});
 			promise_writePathsFile.then(
 				function(aVal) {
