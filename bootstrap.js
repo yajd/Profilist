@@ -1,4 +1,4 @@
-const {interfaces: Ci, utils: Cu, classes: Cc} = Components;
+const {interfaces: Ci, utils: Cu, classes: Cc, results: Cr} = Components;
 const self = {
 	name: 'Profilist',
 	id: 'Profilist@jetpack',
