@@ -4351,8 +4351,7 @@ function makeLauncher(for_ini_key, ch_name) {
 		path_toFxApp = path_toFxApp.substr(0, path_toFxApp.toLowerCase().indexOf('.app') + 4);
 		console.info('path_toFxApp:', path_toFxApp);
 		var path_toFxAppContents = OS.Path.join(path_toFxApp, 'Contents');
-		theProfName_safedForPath = ini[for_ini_key].props.Name.replace(/\//g, ' ');
-		theLauncherAndAliasName = appNameFromChan(theChName) + ' - ' + theProfName_safedForPath;		
+		theLauncherAndAliasName = getLauncherName(for_ini_key, theChName);
 		var path_toLauncher = OS.Path.join(profToolkit.path_iniDir, 'profilist_data', 'profile_launchers', theLauncherAndAliasName + '.app'); // we create at this path
 		var path_toLauncherContents = OS.Path.join(path_toLauncher, 'Contents');
 		var bundleIdentifer;
@@ -4816,7 +4815,7 @@ function makeLauncher(for_ini_key, ch_name) {
 				var execConts = [
 					'#!/bin/sh',
 					'##' + JSON.stringify(identJson) + '##',
-					'exec "' + path_toLauncherBin + '" -profile "' + getPathToProfileDir(for_ini_key) + '" -no-remote' // i think i have to use path to launcher so it gets icon even on killall Dock etc
+					'exec "' + path_toLauncherBin + '" -profile "' + getPathToProfileDir(for_ini_key) + '" -no-remote "$@"' // i think i have to use path to launcher so it gets icon even on killall Dock etc
 				];
 				var promise_writeExec = OS.File.writeAtomic(path_profilistExec, execConts.join('\n'), {tmpPath:path_profilistExec+'.profilist.bkp'});
 
@@ -4882,7 +4881,6 @@ function makeLauncher(for_ini_key, ch_name) {
 	
 	// start - sub globals (globals used in my sub funcs)
 	var theChName;
-	var theProfName_safedForPath;
 	var theLauncherAndAliasName;
 	// end - sub globals (globals used in my sub funcs)
 	
@@ -4962,8 +4960,7 @@ function makeDesktopShortcut(for_ini_key) {
 		var deferred_makeCut = new Deferred();
 		
 		if (OS.Constants.Sys.Name == 'Darwin') { //note:debug added in winnt
-			theProfName_safedForPath = ini[for_ini_key].props.Name.replace(/\//g, ' ');
-			theLauncherAndAliasName = appNameFromChan(theChName) + ' - ' + theProfName_safedForPath;
+			theLauncherAndAliasName = getLauncherName(for_ini_key, theChName);
 			/*
 			// check if name is available in launchers folder of var cutName = 'LOCALIZED_BUILD - ' + ini[for_ini_key].props.Name.replace(/\//g, '%')"
 				// if its avail, then `ini[for_ini_key].props['Profilist.launcher'] =  cutName` without need for .app //was going to make this `ini[for_ini_key].props['Profilist.launcher-basename']`
@@ -5125,13 +5122,21 @@ function makeDesktopShortcut(for_ini_key) {
 	
 	// start - globals for these sub funcs
 	var theChName;
-	var theProfName_safedForPath;
 	var theLauncherAndAliasName;
 	// end - globals for these sub funcs
 	
 	do_getChName();
 	
 	return deferred_makeDesktopShortcut.promise;
+}
+function getLauncherName(for_ini_key, thChName) {
+	var theProfName_safedForPath;
+	if (OS.Constants.Sys.Name == 'WINNT') {
+		theProfName_safedForPath = ini[for_ini_key].props.Name.replace(/([\\*:?<>|\/\"])/g, '%')
+	} else {
+		theProfName_safedForPath = ini[for_ini_key].props.Name.replace(/\//g, ' '); //for mac and nix
+	}
+	return appNameFromChan(theChName) + ' - ' + theProfName_safedForPath;
 }
 // end - shortcut creation
 
