@@ -6556,6 +6556,7 @@ function mac_doPathsOverride() {
 				pathsFileContentsJson = JSON.parse(aVal);
 				overrideSpecialPaths(); //lets go stragiht to override, we'll right the pref afterwards, just to save a ms or two
 				Services.prefs.setCharPref('extension.Profilist@jetpack.mac-paths-fixup', aVal); // im not going to set a default on this, because if i do then on startup the pref wont exist so it would have to written first, which would require me to read the file on disk, which we want to avoid
+				do_profilistStartup();
 				// end - do stuff here - promise_readThisPathsFile
 			},
 			function(aReason) {
