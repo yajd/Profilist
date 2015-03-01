@@ -4806,7 +4806,8 @@ function makeLauncher(for_ini_key, ch_name) {
 				
 				// start - write exec
 				
-				var path_profilistExec = OS.Path.join(/*path_toLauncher*/path_toFxApp, 'Contents', 'MacOS', 'profilist-' + bundleIdentifer); //i use path_toFxApp instead of path_toLauncher, so this way i dont have to wait for aliases to finish copying
+				var path_profilistExec = OS.Path.join(path_toLauncher/*path_toFxApp*/, 'Contents', 'MacOS', 'profilist-' + bundleIdentifer); // i think i have to use path to launcher so it gets icon even on killall Dock etc ignore: `//i use path_toFxApp instead of path_toLauncher, so this way i dont have to wait for aliases to finish copying`
+				var path_toLauncherBin = OS.Path.join(path_toLauncher, 'Contents', 'MacOS', 'firefox');
 				var identJson = {
 					build: path_toFxBin,
 					iconName: getIconName(for_ini_key, theChName),
@@ -4815,7 +4816,7 @@ function makeLauncher(for_ini_key, ch_name) {
 				var execConts = [
 					'#!/bin/sh',
 					'##' + JSON.stringify(identJson) + '##',
-					'exec "' + path_toFxBin + '" -profile "' + getPathToProfileDir(for_ini_key) + '" -no-remote'
+					'exec "' + path_toLauncherBin + '" -profile "' + getPathToProfileDir(for_ini_key) + '" -no-remote'
 				];
 				var promise_writeExec = OS.File.writeAtomic(path_profilistExec, execConts.join('\n'), {tmpPath:path_profilistExec+'.profilist.bkp'});
 
