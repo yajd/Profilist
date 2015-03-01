@@ -6597,7 +6597,8 @@ function mac_doPathsUNoveride() {
 	}
 	
 	Services.dirsvc.unregisterProvider(macStuff.overidingDirProvider);
-	
+	console.warn('ok took it out the overidingProvider');
+/*	
 	macStuff.UNoveridingDirProvider = {
 		getFile: function(aProp, aPersistent) {
 			aPersistent.value = true;
@@ -6611,15 +6612,17 @@ function mac_doPathsUNoveride() {
 		}
 	};
 
+	for (var key in specialKeyReplaceType) {
+		Services.dirsvc.undefine(key);
+	}
 	Services.dirsvc.registerProvider(macStuff.UNoveridingDirProvider);
 	
 	for (var key in specialKeyReplaceType) {
-		try {
-			Services.dirsvc.undefine(key);
-		} catch (ex) {}
 		var dummy = Services.dirsvc.get(key, Ci.nsIFile);
+		console.log('did unooveride on key', key, 'path:', dummy.path);
 	}
 	Services.dirsvc.unregisterProvider(macStuff.UNoveridingDirProvider);
+*/
 }
 //end - mac over and unover ride stuff
 function startup(aData, aReason) {
