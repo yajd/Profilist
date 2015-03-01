@@ -20,9 +20,10 @@ var unloaders = {};
 var PUIsync_height;
 var PUIsync;
 
-var updateChannel = '';
 var devBuildsStrOnLastUpdateToGlobalVar = ''; //named this for global var instead of dom as im thinking of making it not update all windows, just update the current window on menu panel show
 var currentThisBuildsIconPath = '';
+
+var macStuff = {};
 
 //var pathProfilesIni = OS.Path.join(OS.Constants.Path.userApplicationDataDir, 'profiles.ini');
 //var pathProfilesIniBkp = profToolkit.path_iniFile + '.profilist.bkp';
@@ -171,10 +172,7 @@ current builds icon if dev mode is enabled
 							}
 						});
 						//if got here, then it didnt throw BreakException so that means it didnt find an icon so use default branding
-						if (updateChannel == '') {
-							updateChannel = Services.prefs.getCharPref('app.update.channel');
-						}
-						if (updateChannel.indexOf('beta') > -1) { //have to do this because beta branding icon is same as release, so i apply my custom beta bullet png
+						if (Services.prefs.getCharPref('app.update.channel').indexOf('beta') > -1) { //have to do this because beta branding icon is same as release, so i apply my custom beta bullet png
 							currentThisBuildsIconPath = self.chrome_path + 'bullet_beta.png';
 						} else {
 							currentThisBuildsIconPath = 'chrome://branding/content/icon16.png';
@@ -2520,10 +2518,7 @@ function checkIfIconIsRight(dev_builds_str, dom_element_to_update_profilist_box,
 					}
 				});
 				//if got here, then it didnt throw BreakException so that means it didnt find an icon so use default branding
-				if (updateChannel == '') {
-					updateChannel = Services.prefs.getCharPref('app.update.channel');
-				}
-				if (updateChannel.indexOf('beta') > -1) { //have to do this because beta branding icon is same as release, so i apply my custom beta bullet png
+				if (Services.prefs.getCharPref('app.update.channel').indexOf('beta') > -1) { //have to do this because beta branding icon is same as release, so i apply my custom beta bullet png
 					currentThisBuildsIconPath = self.chrome_path + 'bullet_beta.png';
 				} else {
 					currentThisBuildsIconPath = 'chrome://branding/content/icon16.png';
@@ -3053,7 +3048,7 @@ function saveTie(e) {
 					}
 				});
 				//start - profToolkit.exePathLower wasnt found in dev-builds so add it
-				var iconP = updateChannel + '_auto.png'; //icon path
+				var iconP = Services.prefs.getCharPref('app.update.channel') + '_auto.png'; //icon path
 				var downloadP = currentThisBuildsIconPath; //its obviously the current builds path if got here
 				xhr(downloadP, data => {
 					//Services.prompt.alert(null, 'XHR Success', data);
@@ -3284,6 +3279,16 @@ var windowListener = {
 		if (!aDOMWindow) {
 			return;
 		}
+		
+		// start - do os specific stuff
+		if (macStuff.isMac) {
+			/*
+			OS.Constants.Path.libDir = Services.dirsvc.get('GreBinD', Ci.nsIFile).path;
+			OS.Constants.Path.libsqlite3 = Services.dirsvc.get('GreBinD', Ci.nsIFile).path;
+			OS.Constants.Path.libxul = 	Services.dirsvc.get('XpcomLib', Ci.nsIFile).path;
+			*/
+		}
+		// end - do os specific stuff
 		
 		aDOMWindow.addEventListener('activate', activated, false); //because might have the options tab open in a non PanelUI window
 		//var PanelUI = aDOMWindow.document.getElementById('PanelUI-popup'); //even doc.getElementById wont exist if window isnt loaded yet, meaning readyState == complete
@@ -4026,6 +4031,8 @@ function channelNameTo_refName(ch_name) {
 		throw new Error('channelNameTo_refName unrecognized ch_name of: "' + ch_name + '"');
 	}
 }
+
+var getChannelNameOfProfile_cache_perBuild = {}; // [buildPath] = chan
 function getChannelNameOfProfile(for_ini_key) {
 	// can pass `null` for `for_ini_key` and if this is temp profile it will give that else will give regular error of not found
 	// returns promise
@@ -4033,38 +4040,56 @@ function getChannelNameOfProfile(for_ini_key) {
 	
 	var deferred_getChannelNameOfProfile = new Deferred();
 	
+	getChannelNameOfProfile_cache_perBuild[profToolkit.exePath] = Services.prefs.getCharPref('app.update.channel')
+	
 	if (for_ini_key == profToolkit.selectedProfile.iniKey) {
-		deferred_getChannelNameOfProfile.resolve(Services.prefs.getCharPref('app.update.channel'));
+		deferred_getChannelNameOfProfile.resolve(getChannelNameOfProfile_cache_perBuild[profToolkit.exePath]);
 	} else {
-		var path_channelName = OS.Path.join(profToolkit.PrfDef, 'channel-prefs.js');
-		
-		var promise_readChanPref = read_encoded(path_channelName, {encoding:'utf-8'});
-		promise_readChanPref.then(
-			function(aVal) {
-				console.log('Fullfilled - promise_readChanPref - ', aVal);
-				// start - do stuff here - promise_readChanPref
-				var chanVal = aVal.match(/pref\("app\.update\.channel", "(.*?)"/);
-				if (!chanVal) {
-					var rejObj = {name:'promise_readChanPref', aReason:'Regex match failed', fileContents:aVal, regexMatchVal:chanVal};
-					deferred_getChannelNameOfProfile.reject('Regex match failed');
-				} else {
-					chanVal = chanVal[1];
-					deferred_getChannelNameOfProfile.resolve(chanVal);
+		var path_channelName;
+		var buildPath; //build of the profile for_ini_key
+		//var path_channelName = OS.Path.join(profToolkit.PrfDef, 'channel-prefs.js');
+		if ('Profilist.tie' in ini[for_ini_key]) {
+			buildPath = getPathToBuildByTie(ini[for_ini_key]['Profilist.tie']);
+		} else {
+			buildPath = profToolkit.exePath;
+		}
+		if (OS.Constants.Sys.Name != 'Darwin') {
+			path_channelName = OS.Path.join(OS.Path.dirname(buildPath), 'defaults', 'pref', 'channel-prefs.js');
+		} else {
+			path_channelName = OS.Path.join(buildPath.substr(0, buildPath.toLowerCase().indexOf('.app') + 4), 'Contents', 'Resources', 'defaults', 'pref', 'channel-prefs.js');
+		}
+		if (path_channelName in getChannelNameOfProfile_cache_perBuild) { // note:important: requires tie id to have proper cassing on tie paths
+			deferred_getChannelNameOfProfile.resolve(getChannelNameOfProfile_cache_perBuild[path_channelName]);
+		} else {
+			var promise_readChanPref = read_encoded(path_channelName, {encoding:'utf-8'});
+			promise_readChanPref.then(
+				function(aVal) {
+					console.log('Fullfilled - promise_readChanPref - ', aVal);
+					// start - do stuff here - promise_readChanPref
+					var chanVal = aVal.match(/pref\("app\.update\.channel", "(.*?)"/);
+					if (!chanVal) {
+						var rejObj = {name:'promise_readChanPref', aReason:'Regex match failed', fileContents:aVal, regexMatchVal:chanVal};
+						deferred_getChannelNameOfProfile.reject('Regex match failed');
+					} else {
+						chanVal = chanVal[1];
+						getChannelNameOfProfile_cache_perBuild[path_channelName] = chanVal;
+						deferred_getChannelNameOfProfile.resolve(chanVal);
+					}
+					// end - do stuff here - promise_readChanPref
+				},
+				function(aReason) {
+					var rejObj = {name:'promise_readChanPref', aReason:aReason};
+					console.warn('Rejected - promise_readChanPref - ', rejObj);
+					deferred_getChannelNameOfProfile.reject(rejObj);
 				}
-				// end - do stuff here - promise_readChanPref
-			},
-			function(aReason) {
-				var rejObj = {name:'promise_readChanPref', aReason:aReason};
-				console.warn('Rejected - promise_readChanPref - ', rejObj);
-				deferred_getChannelNameOfProfile.reject(rejObj);
-			}
-		).catch(
-			function(aCaught) {
-				var rejObj = {name:'promise_readChanPref', aCaught:aCaught};
-				console.error('Caught - promise_readChanPref - ', rejObj);
-				deferred_getChannelNameOfProfile.reject(rejObj);
-			}
-		);
+			).catch(
+				function(aCaught) {
+					var rejObj = {name:'promise_readChanPref', aCaught:aCaught};
+					console.error('Caught - promise_readChanPref - ', rejObj);
+					deferred_getChannelNameOfProfile.reject(rejObj);
+				}
+			);
+		}
 	}
 	
 	return deferred_getChannelNameOfProfile.promise;
@@ -4343,7 +4368,7 @@ function makeLauncher(for_ini_key, ch_name) {
 		// start - sub globals
 		var path_toFxApp; // path we will launch
 		if ('Profilist.tie' in ini[for_ini_key].props) {
-			path_toFxApp = exePathOfTie(ini[for_ini_key].props['Profilist.tie']); // used tied path if the profile is tied
+			path_toFxApp = getPathToBuildByTie(ini[for_ini_key].props['Profilist.tie']); // used tied path if the profile is tied
 		} else {
 			path_toFxApp = profToolkit.exePath; //not tied so use current builds path
 		}
@@ -4452,6 +4477,7 @@ function makeLauncher(for_ini_key, ch_name) {
 		var deferred_makeLauncherDirAndFiles = new Deferred(); // make top level dirs, then IN PARALELL (copy contents and write modded plist) then resolve deferred_makeLauncherDirFiles
 		var deferred_writeExecAndPermIt = new Deferred(); //write the executble in the OS.Path.join(path_toFxApp, 'Contents', 'MacOS');
 		var deferred_writeIcon = new Deferred(); //create badged tied icon in OS.Path.join(path_toFxApp, 'Contents', 'Resources');
+		var deferred_ensure_pathsPrefContentsJson = new Deferred();
 		
 		promiseAllArr_makeMac.push(deferred_makeLauncherDirAndFiles.promise);
 		promiseAllArr_makeMac.push(deferred_writeExecAndPermIt.promise);
@@ -4478,6 +4504,45 @@ function makeLauncher(for_ini_key, ch_name) {
 			}
 		);
 		// end - meat
+		
+		// start do_pathsPrefContentsJson
+		var do_pathsPrefContentsJson = function() {
+			var path_toPrefContentsJson = OS.Path.join(OS.Path.dirname(path_toFxBin), 'profilist-main-paths.json');
+			
+			// start - write main app paths file
+			var pathsFileContentsJson = {
+				mainAppPath: path_toFxApp, //Services.dirsvc.get('XREExeF', Ci.nsIFile).parent.parent.parent.path,
+				main_profLD_LDS_basename: Services.dirsvc.get('ProfLD', Ci.nsIFile).parent.path
+			};
+			var pathsFileContents = JSON.stringify(pathsFileContentsJson);
+			var path_toPrefContentsJson = OS.Path.join(pathToFFApp, 'Contents', 'MacOS', 'profilist-main-paths.json');
+			var promise_writePathsFile = OS.File.writeAtomic(path_toPrefContentsJson, pathsFileContents, {{encoding:'utf-8', tmpPath:path_toPrefContentsJson+'.bkp'}});
+			promise_writePathsFile.then(
+				function(aVal) {
+					console.log('Fulfilled - promise_writePathsFile - ', aVal);
+					deferred_ensure_pathsPrefContentsJson.resolve('paths json written');
+				},
+				function(aReason) {
+					var rejObj = {
+						promiseName: 'promise_writePathsFile',
+						aReason: aReason
+					};
+					console.error('Rejected - ' + rejObj.promiseName + ' - ', rejObj);
+					deferred_ensure_pathsPrefContentsJson.reject(rejObj);
+				}
+			).catch(
+				function(aCaught) {
+					var rejObj = {
+						promiseName: 'promise_writePathsFile',
+						aCaught: aCaught
+					};
+					console.error('Caught - promise_writePathsFile - ', rejObj);
+					deferred_ensure_pathsPrefContentsJson.reject(rejObj);
+				}
+			);
+			// end - write main app paths file
+		}
+		// end do_pathsPrefContentsJson
 		
 		// start - do_makeLauncherDirAndFiles
 		var do_makeLauncherDirAndFiles = function() {
@@ -5041,7 +5106,7 @@ function makeDesktopShortcut(for_ini_key) {
 							
 							var path_toFxApp; // path we will launch
 							if ('Profilist.tie' in ini[for_ini_key].props) {
-								path_toFxApp = exePathOfTie(ini[for_ini_key].props['Profilist.tie']); // used tied path if the profile is tied
+								path_toFxApp = getPathToBuildByTie(ini[for_ini_key].props['Profilist.tie']); // used tied path if the profile is tied
 							} else {
 								path_toFxApp = profToolkit.exePath; //not tied so use current builds path
 							}
@@ -6363,59 +6428,245 @@ function showPick4Badging(win) {
 }
 // end - file picker for changing badge
 
+function mac_doPathsOverride() {
+	// returns promise
+	var deferred_mac_doPathsOverride = new Deferred();
+	
+	try {
+		pathsPrefContentsJson = Services.prefs.getCharPref('extension.Profilist@jetpack.mac-paths-fixup');
+	} catch (ex if ex.result == Cr.NS_ERROR_UNEXPECTED) {
+		// Cr.NS_ERROR_UNEXPECTED is what is thrown when pref doesnt exist
+		throw ex;
+	}
+	
+	var pathsFileContentsJson;
+	var overrideSpecialPaths = function() {
+		// returns nothing
+		var nsIFile_origAlias = {};
+		
+		var aliasAppPath = Services.dirsvc.get('XREExeF', Ci.nsIFile).parent.parent.parent.path;
+		var mainAppPath = pathsFileContentsJson.mainAppPath;
+		var main_profLD_LDS_basename = pathsFileContentsJson.main_profLD_LDS_basename;
+		
+		var specialKeyReplaceType = {
+			//group
+			'XREExeF': 3,
+			'XREAppDist': 3,
+			'DefRt': 3,
+			'PrfDef': 3,
+			'profDef': 3,
+			'ProfDefNoLoc': 3,
+			'ARes': 3,
+			'AChrom': 3,
+			'APlugns': 3,
+			'SrchPlugns': 3,
+			'XPIClnupD': 3,
+			'CurProcD': 3,
+			'XCurProcD': 3,
+			'XpcomLib': 3,
+			'GreD': 3,
+			'GreBinD': 3,
+			//group
+			'UpdRootD': 5,
+			//group
+			'ProfLDS': 4,
+			'ProfLD': 4
+		};
+		
+		var replaceTypes = {
+			3: function(key) {
+				//replace aliasAppPath with mainAppPath after getting orig key value
+				var newpath = nsIFile_origAlias[key].path.replace(aliasAppPath, mainAppPath);
+				return new FileUtils.File(newpath);
+			},
+			4: function(key) {
+				// for ProfLD and ProfLDS
+				// replace basename of alias with basename of main IF its IsRelative=1
+				// ProfLD and ProfLDS are same in all cases, IsRelative==1 || 0 and reg || alias
+				// DefProfLRt AND DefProfRt are same in alias and reg in both IsRelative 1 and 0
+				// IsRelative=1 ProfLD and ProfLDS are based on DefProfLRt in regular, but on DefProfRt in alias
+				// so to detect if IsRelative == 1 I can test to see if ProfLD and ProfLDS contain DefProfLRt OR DefProfRt
+				if (nsIFile_origAlias[key].path.indexOf(Services.dirsvc.get('DefProfLRt', Ci.nsIFile).path) > -1 || nsIFile_origAlias[key].path.indexOf(Services.dirsvc.get('DefProfRt', Ci.nsIFile).path) > -1) {
+					// ProfLD or ProfLDS are keys, and they contain either DefProfLRt or DefProfRt, so its a realtive profile
+					// IsRelative == 1
+					// so need fix up on ProfLD and ProfLDS
+					var newAlias_ProfLD_or_ProfLDS = nsIFile_origAlias[key].path.replace(nsIFile_origAlias['ProfLD'].parent.path, main_profLD_LDS_basename);
+					return new FileUtils.File(newAlias_ProfLD_or_ProfLDS);
+				} else {
+					//IsRelative == 0
+					// so no need for fix up, just return what it was
+					console.log('no need for fixup of ProfLD or ProfLDS as this is custom path profile, meaning its absolute path, meaning IsRelative==0');
+					return nsIFile_origAlias[key];
+				}
+			},
+			5: function() {
+				// for UpdRootD
+				// replaces the aliasAppPath (minus the .app) in UpdRootD with mainAppPath (minus the .app)
+				var aliasAppPath_noExt = aliasAppPath.substr(0, aliasAppPath.length-('.app'.length));
+				var mainAppPath_noExt = mainAppPath.substr(0, mainAppPath.length-('.app'.length));
+				var newpath = nsIFile_origAlias['UpdRootD'].path.replace(aliasAppPath_noExt, mainAppPath_noExt);
+				return new FileUtils.File(newpath);
+			}
+			// not yet cross checked with custom path
+		};
+		
+		macStuff.overidingDirProvider = {
+			getFile: function(aProp, aPersistent) {
+				aPersistent.value = true;
+				if (replaceTypes[specialKeyReplaceType[aProp]]) {
+					return replaceTypes[specialKeyReplaceType[aProp]](aProp);
+				}
+				return null;
+			},
+			QueryInterface: function(aIID) {
+				if (aIID.equals(Ci.nsIDirectoryServiceProvider) || aIID.equals(Ci.nsISupports)) {
+					return this;
+				}
+				console.error('override DirProvider error:', Cr.NS_ERROR_NO_INTERFACE, 'aIID:', aIID);
+			}
+		};
+
+		for (var key in specialKeyReplaceType) {
+			nsIFile_origAlias[key] = Services.dirsvc.get(key, Ci.nsIFile);
+			/*
+			if (specialKeyReplaceType[key] == 2) {
+				path_origAlias[key] = Services.dirsvc.get(key, Ci.nsIFile).path;
+			}
+			*/
+			Services.dirsvc.undefine(key);
+		}
+		Services.dirsvc.registerProvider(macStuff.overidingDirProvider);
+		//myServices.ds.unregisterProvider(dirProvider);
+		console.log('oevrrid');
+	};
+	
+	if (pathsPrefContentsJson) {
+		// actually forget it, just on shutdown i should unregister the dirProvider
+		pathsPrefContentsJson = JSON.parse(pathsPrefContentsJson);
+		overrideSpecialPaths();
+	} else {
+		//var path_to_ThisPathsFile = OS.Path.join(Services.dirsvc.get('GreBinD', Ci.nsIFile).path, 'profilist-main-paths.json'); // because immediate children of Contents are aliased specifically the Resource dir, i can just access it like this, no matter if overrid or not, and it (GreD) is not overrid at this point		
+		var path_to_ThisPathsFile = OS.Path.join(Services.dirsvc.get('XREExeF', Ci.nsIFile).parent.path, 'profilist-main-paths.json'); // because immediate children of Contents are aliased specifically the Resource dir, i can just access it like this, no matter if overrid or not, and it (GreD) is not overrid at this point		
+		var promise_readThisPathsFile = read_encoded(path_to_ThisPathsFile, {encoding:'utf-8'});
+		promise_readThisPathsFile.then(
+			function(aVal) {
+				console.log('Fullfilled - promise_readThisPathsFile - ', aVal);
+				// start - do stuff here - promise_readThisPathsFile
+				pathsPrefContentsJson = JSON.parse(aVal);
+				overrideSpecialPaths(); //lets go stragiht to override, we'll right the pref afterwards, just to save a ms or two
+				Services.prefs.setCharPref('extension.Profilist@jetpack.mac-paths-fixup', aVal); // im not going to set a default on this, because if i do then on startup the pref wont exist so it would have to written first, which would require me to read the file on disk, which we want to avoid
+				// end - do stuff here - promise_readThisPathsFile
+			},
+			function(aReason) {
+				var rejObj = {name:'promise_readThisPathsFile', aReason:aReason};
+				console.warn('Rejected - promise_readThisPathsFile - ', rejObj);
+				deferred_mac_doPathsOverride.reject(rejObj);
+			}
+		).catch(
+			function(aCaught) {
+				var rejObj = {name:'promise_readThisPathsFile', aCaught:aCaught};
+				console.error('Caught - promise_readThisPathsFile - ', rejObj);
+				deferred_mac_doPathsOverride.reject(rejObj);
+			}
+		);
+	}
+	
+	return deferred_mac_doPathsOverride.promise;
+}
+
 function startup(aData, aReason) {
 //	console.log('in startup');
-	self.aData = aData; //must go first, because functions in loadIntoWindow use self.aData
-	PromiseWorker = Cu.import(self.chrome_path + 'modules/PromiseWorker.jsm').BasePromiseWorker;
-	ProfilistWorker = new PromiseWorker(self.chrome_path + 'modules/workers/ProfilistWorker.js');
-	//console.log('aData', aData);
-//	//console.log('initing prof toolkit');
-	initProfToolkit();
-//	//console.log('init done');
-	//updateProfToolkit(1, 1); //although i dont need the 2nd arg as its init
-	//var css = '.findbar-container {-moz-binding:url(' + self.path.chrome + 'findbar.xml#matchword_xbl)}';
-	//var cssEnc = encodeURIComponent(css);
-	var newURIParam = {
-		aURL: self.chrome_path /*self.aData.resourceURI.spec*/ + 'main.css', //'data:text/css,' + cssEnc,
-		aOriginCharset: null,
-		aBaseURI: null
-	}
-	cssUri = Services.io.newURI(newURIParam.aURL, newURIParam.aOriginCharset, newURIParam.aBaseURI);
-	//myServices.sss.loadAndRegisterSheet(cssUri, myServices.sss.AUTHOR_SHEET);
 	
-	//start pref stuff more
-	myPrefListener = new PrefListener(); //init
-	console.info('myPrefListener', myPrefListener);
-	myPrefListener.register(aReason, false);
-	//end pref stuff more
-	
-	var promise_iniFirstRead = readIniAndParseObjs();
-	promise_iniFirstRead.then(
-		function(aVal) {
-			console.log('Fullfilled - promise_iniFirstRead - ', aVal);
-			
-			windowListener.register();
-			
-			for (var o in observers) {
-				if (observers[o].preReg) { observers[o].preReg() }
-				Services.obs.addObserver(observers[o].anObserver, o, false);
-				observers[o].WAS_REGGED = true;
-				if (observers[o].postReg) { observers[o].postReg() }
+	var do_profilistStartup = function() { // wrap this so have time to do whatever os specific stuff before starting up profilist
+		self.aData = aData; //must go first, because functions in loadIntoWindow use self.aData
+		PromiseWorker = Cu.import(self.chrome_path + 'modules/PromiseWorker.jsm').BasePromiseWorker;
+		ProfilistWorker = new PromiseWorker(self.chrome_path + 'modules/workers/ProfilistWorker.js');
+		//console.log('aData', aData);
+	//	//console.log('initing prof toolkit');
+		initProfToolkit();
+	//	//console.log('init done');
+		//updateProfToolkit(1, 1); //although i dont need the 2nd arg as its init
+		//var css = '.findbar-container {-moz-binding:url(' + self.path.chrome + 'findbar.xml#matchword_xbl)}';
+		//var cssEnc = encodeURIComponent(css);
+		var newURIParam = {
+			aURL: self.chrome_path /*self.aData.resourceURI.spec*/ + 'main.css', //'data:text/css,' + cssEnc,
+			aOriginCharset: null,
+			aBaseURI: null
+		}
+		cssUri = Services.io.newURI(newURIParam.aURL, newURIParam.aOriginCharset, newURIParam.aBaseURI);
+		//myServices.sss.loadAndRegisterSheet(cssUri, myServices.sss.AUTHOR_SHEET);
+		
+		//start pref stuff more
+		myPrefListener = new PrefListener(); //init
+		console.info('myPrefListener', myPrefListener);
+		myPrefListener.register(aReason, false);
+		//end pref stuff more
+		
+		var promise_iniFirstRead = readIniAndParseObjs();
+		promise_iniFirstRead.then(
+			function(aVal) {
+				console.log('Fullfilled - promise_iniFirstRead - ', aVal);
+				
+				windowListener.register();
+				
+				for (var o in observers) {
+					if (observers[o].preReg) { observers[o].preReg() }
+					Services.obs.addObserver(observers[o].anObserver, o, false);
+					observers[o].WAS_REGGED = true;
+					if (observers[o].postReg) { observers[o].postReg() }
+				}
+				//ifClientsAliveEnsure_thenEnsureListenersAlive();
+				onResponseEnsureEnabledElseDisabled();
+				//Services.obs.notifyObservers(null, 'profilist-update-cp-dom', 'restart');
+			},
+			function(aReason) {
+				var rejObj = {name:'promise_iniFirstRead', aReason:aReason};
+				console.error('Rejected - promise_iniFirstRead - ', rejObj);
 			}
-			//ifClientsAliveEnsure_thenEnsureListenersAlive();
-			onResponseEnsureEnabledElseDisabled();
-			//Services.obs.notifyObservers(null, 'profilist-update-cp-dom', 'restart');
-		},
-		function(aReason) {
-			var rejObj = {name:'promise_iniFirstRead', aReason:aReason};
-			console.error('Rejected - promise_iniFirstRead - ', rejObj);
+		).catch(
+			function(aCaught) {
+				console.error('Caught - promise_iniFirstRead - ', aCaught);
+				// throw aCaught;
+			}
+		);
+	};
+	
+	// os - mac specific stuff
+	if (OS.Constants.Sys.Name == 'Darwin') {
+		macStuff.isMac = true;
+		
+		// check if should override paths
+		if (OS.Constants.Path.libDir.indexOf('profilist_data') > -1) {
+			macStuff.isProfilistLauncher = true;
+			// need to override
+			var promise_overridePaths = mac_doPathsOverride();
+			promise_overridePaths.then(
+				function(aVal) {
+					console.log('Fullfilled - promise_overridePaths - ', aVal);
+					// start - do stuff here - promise_overridePaths
+					do_profilistStartup();
+					// end - do stuff here - promise_overridePaths
+				},
+				function(aReason) {
+					var rejObj = {name:'promise_overridePaths', aReason:aReason};
+					console.warn('Rejected - promise_overridePaths - ', rejObj);
+					Services.prompt.alert(Services.wm.getMostRecentWindow(null), 'Profilist - Critical Error', 'Profilist failed to startup in this Mac OS X launcher, you can only use Profilist from non-shortcut paths, report this to developer at noitidart@gmail.com as this is very bad and should be fixed');
+				}
+			).catch(
+				function(aCaught) {
+					var rejObj = {name:'promise_overridePaths', aCaught:aCaught};
+					console.error('Caught - promise_overridePaths - ', rejObj);
+					Services.prompt.alert(Services.wm.getMostRecentWindow(null), 'Profilist - Critical Error', 'Profilist failed to startup in this Mac OS X launcher, you can only use Profilist from non-shortcut paths, report this to developer at noitidart@gmail.com as this is very bad and should be fixed');
+				}
+			);
+		} else {
+			// actually no need to create, as when first launcher is made the paths get made so ignore: `//create pathsPrefContentsJson;`
 		}
-	).catch(
-		function(aCaught) {
-			console.error('Caught - promise_iniFirstRead - ', aCaught);
-			// throw aCaught;
-		}
-	);
+		
+	} else {
+		do_profilistStartup();
+	}
+	// end - os specific stuff
 	
 }
 
@@ -6454,6 +6705,18 @@ function shutdown(aData, aReason) {
 	//end pref stuff more
 	
 	Cu.unload(self.chrome_path + 'modules/PromiseWorker.jsm');
+	
+	// start - os specific stuff
+	if (macStuff.isMac) {
+		if (macStuff.overidingDirProvider) {
+			// its not bad to leave this registered so im going to leave it
+			//Services.dirsvc.unregisterProvider(macStuff.overidingDirProvider);
+			// old notes below:
+				// its not undefined, so it was registered
+				// in ureg because its needed so Profilist can upgrade gracefully
+		}
+	}
+	// end - os specific stuff
 }
 
 function install() {}
