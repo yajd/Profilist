@@ -1,3 +1,7 @@
+/* TODO
+delete mac override paths files
+delete ovveride paths pref
+*/
 const {interfaces: Ci, utils: Cu, classes: Cc, results: Cr} = Components;
 const self = {
 	name: 'Profilist',
@@ -6764,13 +6768,13 @@ function shutdown(aData, aReason) {
 	
 	// start - os specific stuff
 	if (macStuff.isMac) {
-		if ([ADDON_DOWNGRADE, ADDON_UPGRADE].indexOf(aReason) > -1 || macStuff.overidingDirProvider) { // its not bad to leave this registered so im going to leave it on disable/uninstall, but on upgrade/downgrade i unreg it so on the upgrade i can properly recognize that its a profilist launcher as opposed to main Firefox.app
+		//if ([ADDON_DOWNGRADE, ADDON_UPGRADE].indexOf(aReason) > -1 || macStuff.overidingDirProvider) { // its not bad to leave this registered so im going to leave it on disable/uninstall, but on upgrade/downgrade i unreg it so on the upgrade i can properly recognize that its a profilist launcher as opposed to main Firefox.app
 			mac_doPathsUNoveride();
-			console.log('unregistered dir provider');
+			//console.log('unregistered dir provider');
 			// old notes below:
 				// its not undefined, so it was registered
 				// in ureg because its needed so Profilist can upgrade gracefully
-		}
+		//}
 	}
 	// end - os specific stuff
 }
