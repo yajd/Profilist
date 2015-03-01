@@ -6614,7 +6614,9 @@ function mac_doPathsUNoveride() {
 	Services.dirsvc.registerProvider(macStuff.UNoveridingDirProvider);
 	
 	for (var key in specialKeyReplaceType) {
-		Services.dirsvc.undefine(key);
+		try {
+			Services.dirsvc.undefine(key);
+		} catch (ex) {}
 		var dummy = Services.dirsvc.get(key, Ci.nsIFile);
 	}
 	Services.dirsvc.unregisterProvider(macStuff.UNoveridingDirProvider);
