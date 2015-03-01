@@ -6661,6 +6661,7 @@ function startup(aData, aReason) {
 			);
 		} else {
 			// actually no need to create, as when first launcher is made the paths get made so ignore: `//create pathsPrefContentsJson;`
+			do_profilistStartup();
 		}
 		
 	} else {
