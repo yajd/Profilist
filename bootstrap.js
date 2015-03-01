@@ -6542,7 +6542,7 @@ function mac_doPathsOverride() {
 	
 	if (pathsPrefContentsJson) {
 		// actually forget it, just on shutdown i should unregister the dirProvider
-		pathsPrefContentsJson = JSON.parse(pathsPrefContentsJson);
+		pathsFileContentsJson = JSON.parse(pathsPrefContentsJson);
 		overrideSpecialPaths();
 	} else {
 		//var path_to_ThisPathsFile = OS.Path.join(Services.dirsvc.get('GreBinD', Ci.nsIFile).path, 'profilist-main-paths.json'); // because immediate children of Contents are aliased specifically the Resource dir, i can just access it like this, no matter if overrid or not, and it (GreD) is not overrid at this point		
@@ -6552,7 +6552,8 @@ function mac_doPathsOverride() {
 			function(aVal) {
 				console.log('Fullfilled - promise_readThisPathsFile - ', aVal);
 				// start - do stuff here - promise_readThisPathsFile
-				pathsPrefContentsJson = JSON.parse(aVal);
+				pathsPrefContentsJson = aVal;
+				pathsFileContentsJson = JSON.parse(aVal);
 				overrideSpecialPaths(); //lets go stragiht to override, we'll right the pref afterwards, just to save a ms or two
 				Services.prefs.setCharPref('extension.Profilist@jetpack.mac-paths-fixup', aVal); // im not going to set a default on this, because if i do then on startup the pref wont exist so it would have to written first, which would require me to read the file on disk, which we want to avoid
 				// end - do stuff here - promise_readThisPathsFile
