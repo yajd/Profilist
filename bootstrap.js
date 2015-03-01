@@ -6443,7 +6443,7 @@ function mac_doPathsOverride() {
 	var string_prefContents;
 	try {
 		string_prefContents = Services.prefs.getCharPref('extension.Profilist@jetpack.mac-paths-fixup');
-	} catch (ex if ex.result == Cr.NS_ERROR_UNEXPECTED) {
+	} catch (ex if ex.result != Cr.NS_ERROR_UNEXPECTED) {
 		// Cr.NS_ERROR_UNEXPECTED is what is thrown when pref doesnt exist
 		throw ex;
 	}
